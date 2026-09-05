@@ -1,5 +1,6 @@
 package com.example.nexos.controllers;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,17 +15,24 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import com.example.nexos.models.ClientModel;
+import com.example.nexos.repositories.ClientRepository;
+
 @SpringBootTest
 class ClientControllerIntegrationTests {
 
     @Autowired
     private WebApplicationContext webApplicationContext;
 
+    @Autowired
+    private ClientRepository clientRepository;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        clientRepository.deleteAll();
     }
 
     @Test
@@ -58,6 +66,28 @@ class ClientControllerIntegrationTests {
                         }
                         """))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnClientById() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+
+        mockMvc.perform(get("/clients/{id}", clientModel.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(clientModel.getId()))
+                .andExpect(jsonPath("$.nome").value("Ana Souza"))
+                .andExpect(jsonPath("$.telefone").value("(11) 99999-9999"))
+                .andExpect(jsonPath("$.email").value("ana.souza@example.com"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenClientDoesNotExist() throws Exception {
+        mockMvc.perform(get("/clients/{id}", 999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.title").value("Recurso não encontrado"))
+                .andExpect(jsonPath("$.detail").value("Cliente com id 999 não foi encontrado"));
     }
 
 }

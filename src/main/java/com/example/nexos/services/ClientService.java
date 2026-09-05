@@ -4,6 +4,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.nexos.dtos.ClientDTO;
 import com.example.nexos.dtos.CreateClientDTO;
+import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ClientMapper;
 import com.example.nexos.models.ClientModel;
 import com.example.nexos.repositories.ClientRepository;
@@ -24,6 +25,13 @@ public class ClientService {
         ClientModel savedClient = clientRepository.save(clientModel);
 
         return clientMapper.map(savedClient);
+    }
+
+    public ClientDTO findById(Long id) {
+        ClientModel clientModel = clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente com id " + id + " não foi encontrado"));
+
+        return clientMapper.map(clientModel);
     }
 
 }
