@@ -1,5 +1,7 @@
 package com.example.nexos.services;
 
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 
 import com.example.nexos.dtos.ClientDTO;
@@ -32,6 +34,13 @@ public class ClientService {
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente com id " + id + " não foi encontrado"));
 
         return clientMapper.map(clientModel);
+    }
+
+    public List<ClientDTO> findAll() {
+        return clientRepository.findAll()
+                .stream()
+                .map(clientMapper::map)
+                .toList();
     }
 
 }

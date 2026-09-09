@@ -1,7 +1,10 @@
 package com.example.nexos.controllers;
 
+import java.util.List;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -88,6 +91,24 @@ class ClientControllerIntegrationTests {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.title").value("Recurso não encontrado"))
                 .andExpect(jsonPath("$.detail").value("Cliente com id 999 não foi encontrado"));
+    }
+
+    @Test
+    void shouldReturnEmptyClientList() throws Exception {
+        mockMvc.perform(get("/clients"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+    @Test
+    void shouldReturnAllClients() throws Exception {
+        clientRepository.saveAll(List.of(
+                new ClientModel(null, "Ana Souza", "(11) 99999-9999", "ana.souza@example.com"),
+                new ClientModel(null, "Bruno Lima", "(11) 98888-8888", "bruno.lima@example.com")));
+
+        mockMvc.perform(get("/clients"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
 }
