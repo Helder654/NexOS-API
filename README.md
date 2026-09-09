@@ -1,0 +1,178 @@
+# NexOS API
+
+API REST para o gerenciamento de uma assistência técnica de consoles. O projeto nasceu da evolução de um sistema acadêmico e está sendo reconstruído de forma incremental para consolidar boas práticas de desenvolvimento backend com Java e Spring Boot.
+
+Nesta primeira versão, a API permite cadastrar clientes e controlar ordens de serviço, desde a abertura até o acompanhamento do reparo.
+
+## Objetivo
+
+O NexOS centraliza informações importantes para uma assistência técnica:
+
+- clientes e seus dados de contato;
+- console recebido e defeito relatado;
+- análise técnica e diagnóstico;
+- valor cobrado e custo interno do reparo;
+- andamento da ordem de serviço.
+
+O backend foi pensado para ser consumido futuramente por uma aplicação web, mobile ou outro cliente HTTP.
+
+## Tecnologias
+
+- Java 21
+- Spring Boot 4
+- Spring Web MVC
+- Spring Data JPA / Hibernate
+- PostgreSQL
+- Maven Wrapper
+- Lombok
+- Bean Validation
+- H2 para testes de integração
+- Springdoc OpenAPI / Swagger UI
+
+## Arquitetura
+
+O código está organizado por responsabilidade:
+
+```text
+com.example.nexos
+├── controllers   # Endpoints HTTP e códigos de resposta
+├── services      # Regras de negócio
+├── repositories  # Acesso aos dados com Spring Data JPA
+├── models        # Entidades e enum de status
+├── dtos          # Contratos de entrada e saída da API
+├── mappers       # Conversão entre DTOs e entidades
+├── exceptions    # Exceções de negócio e respostas de erro
+└── config        # Configurações, como OpenAPI
+```
+
+Essa separação evita expor entidades JPA diretamente na API e mantém as regras de negócio fora dos controllers.
+
+## Funcionalidades atuais
+
+### Clientes
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `POST` | `/clients` | Cadastra um cliente |
+| `GET` | `/clients` | Lista todos os clientes |
+| `GET` | `/clients/{id}` | Busca um cliente por ID |
+| `PUT` | `/clients/{id}` | Atualiza os dados de um cliente |
+| `DELETE` | `/clients/{id}` | Remove um cliente |
+
+### Ordens de serviço
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `POST` | `/service-orders` | Abre uma ordem de serviço |
+| `GET` | `/service-orders` | Lista as ordens abertas no sistema |
+| `GET` | `/service-orders/{id}` | Busca uma ordem por ID |
+| `PUT` | `/service-orders/{id}` | Atualiza dados técnicos e financeiros da ordem |
+| `PATCH` | `/service-orders/{id}/status` | Atualiza somente o status da ordem |
+
+Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
+
+O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
+
+## Fluxo de status da ordem
+
+```text
+ABERTA → EM_ANALISE → AGUARDANDO_APROVACAO → EM_REPARO → FINALIZADA
+   └──────────────→ CANCELADA
+```
+
+O cancelamento é permitido antes da finalização. Estados `FINALIZADA` e `CANCELADA` são finais. Uma transição inválida retorna `409 Conflict` com uma mensagem explicativa.
+
+## Validações e respostas de erro
+
+Os DTOs validam campos obrigatórios, tamanho de textos e valores monetários não negativos antes que a regra de negócio seja executada.
+
+| Situação | Resposta |
+| --- | --- |
+| Corpo de requisição inválido | `400 Bad Request` |
+| Cliente ou ordem não encontrada | `404 Not Found` |
+| Transição de status inválida | `409 Conflict` |
+
+Os erros usam o formato `ProblemDetail` do Spring, deixando a resposta consistente para quem consumir a API.
+
+## Exemplo de abertura de ordem
+
+```http
+POST /service-orders
+Content-Type: application/json
+```
+
+```json
+{
+  "clienteId": 1,
+  "console": "PlayStation 5",
+  "defeitoRelatado": "Console não liga",
+  "analiseTecnico": "Fonte em análise",
+  "diagnostico": "Possível falha na fonte",
+  "valor": 350.00,
+  "custoReparo": 180.00
+}
+```
+
+## Como executar localmente
+
+### Pré-requisitos
+
+- JDK 21 ou superior compatível
+- PostgreSQL em execução
+
+Configure as variáveis de ambiente usadas pela aplicação:
+
+```text
+DATA_BASE_URL=jdbc:postgresql://localhost:5432/nexos
+DATA_BASE_USERNAME=postgres
+DATA_BASE_PASSWORD=sua_senha
+```
+
+Depois, inicie a API usando o Maven Wrapper:
+
+```powershell
+.\mvnw.cmd spring-boot:run
+```
+
+A aplicação será iniciada, por padrão, em `http://localhost:8080`.
+
+## Documentação interativa
+
+Com a aplicação em execução, a documentação pode ser acessada em:
+
+- Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Especificação OpenAPI em JSON: `http://localhost:8080/v3/api-docs`
+
+O Swagger UI permite visualizar contratos, campos, respostas e executar requisições diretamente pelo navegador.
+
+## Testes
+
+O projeto possui testes de integração para os endpoints de clientes, ordens de serviço e documentação OpenAPI. Os testes usam H2 em modo de compatibilidade com PostgreSQL, sem depender do banco local.
+
+```powershell
+.\mvnw.cmd clean test
+```
+
+Atualmente, a suíte possui 27 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes e transições de status inválidas.
+
+## Etapas já desenvolvidas
+
+1. **Fundação do projeto** — Estrutura Spring Boot, entidade de cliente, JPA, DTOs, mappers e configuração do PostgreSQL.
+2. **CRUD de clientes** — Criação, consulta individual, listagem, atualização e remoção, com validações e tratamento de `404`.
+3. **Abertura de ordens de serviço** — Associação obrigatória com cliente, informações do console e valores de reparo, com status inicial controlado.
+4. **Consulta e atualização de ordens** — Busca por ID, listagem e atualização de informações técnicas e financeiras preservando dados sensíveis do fluxo.
+5. **Fluxo de status** — Endpoint específico para status e regras explícitas que impedem saltos de etapas ou reabertura de ordens encerradas.
+6. **Documentação e qualidade** — Swagger/OpenAPI configurado e testes de integração cobrindo o comportamento público da API.
+
+## Próximas evoluções
+
+- exclusão de ordem de serviço, com regras de integridade;
+- filtros e paginação para consultas;
+- migrações de banco com Flyway;
+- autenticação e autorização;
+- histórico de atualizações da ordem;
+- cadastro de técnicos e acompanhamento de custos/lucro.
+
+## Autor
+
+Projeto pessoal desenvolvido por Helder, com foco em evolução prática de backend, arquitetura REST e qualidade de código.
