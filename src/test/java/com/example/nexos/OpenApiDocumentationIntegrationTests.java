@@ -32,7 +32,8 @@ class OpenApiDocumentationIntegrationTests {
                 .andExpect(jsonPath("$.info.title").value("NexOS API"))
                 .andExpect(jsonPath("$.info.version").value("v1"))
                 .andExpect(jsonPath("$.paths['/clients']").exists())
-                .andExpect(jsonPath("$.paths['/service-orders']").exists());
+                .andExpect(jsonPath("$.paths['/service-orders']").exists())
+                .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"));
     }
 
 }

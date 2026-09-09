@@ -5,6 +5,7 @@ import java.net.URI;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -21,10 +22,12 @@ import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.UpdateClientDTO;
 import com.example.nexos.services.ClientService;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/clients")
+@SecurityRequirement(name = "bearerAuth")
 public class ClientController {
 
     private final ClientService clientService;
@@ -34,6 +37,7 @@ public class ClientController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE')")
     public ResponseEntity<ClientDTO> create(@Valid @RequestBody CreateClientDTO createClientDTO) {
         ClientDTO createdClient = clientService.create(createClientDTO);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -45,6 +49,7 @@ public class ClientController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE', 'TECNICO')")
     public ResponseEntity<ClientDTO> findById(@PathVariable Long id) {
         ClientDTO clientDTO = clientService.findById(id);
 
@@ -52,6 +57,7 @@ public class ClientController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE', 'TECNICO')")
     public ResponseEntity<PageResponseDTO<ClientDTO>> findAll(
             @PageableDefault(size = 10, sort = "id") Pageable pageable) {
         PageResponseDTO<ClientDTO> clients = clientService.findAll(pageable);
@@ -60,6 +66,7 @@ public class ClientController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE')")
     public ResponseEntity<ClientDTO> update(@PathVariable Long id, @Valid @RequestBody UpdateClientDTO updateClientDTO) {
         ClientDTO updatedClient = clientService.update(id, updateClientDTO);
 
@@ -67,6 +74,7 @@ public class ClientController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         clientService.delete(id);
 

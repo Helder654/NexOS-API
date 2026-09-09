@@ -7,6 +7,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -28,10 +29,12 @@ import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.services.ServiceOrderService;
 
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/service-orders")
+@SecurityRequirement(name = "bearerAuth")
 public class ServiceOrderController {
 
     private final ServiceOrderService serviceOrderService;
@@ -41,6 +44,7 @@ public class ServiceOrderController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE')")
     public ResponseEntity<ServiceOrderDTO> create(@Valid @RequestBody CreateServiceOrderDTO createServiceOrderDTO) {
         ServiceOrderDTO createdServiceOrder = serviceOrderService.create(createServiceOrderDTO);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -52,6 +56,7 @@ public class ServiceOrderController {
     }
 
     @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE', 'TECNICO')")
     public ResponseEntity<ServiceOrderDTO> findById(@PathVariable Long id) {
         ServiceOrderDTO serviceOrderDTO = serviceOrderService.findById(id);
 
@@ -59,6 +64,7 @@ public class ServiceOrderController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE', 'TECNICO')")
     public ResponseEntity<PageResponseDTO<ServiceOrderDTO>> findAll(
             @ModelAttribute ServiceOrderFilterDTO serviceOrderFilterDTO,
             @PageableDefault(size = 10, sort = "dataAbertura", direction = Sort.Direction.DESC) Pageable pageable) {
@@ -68,6 +74,7 @@ public class ServiceOrderController {
     }
 
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECNICO')")
     public ResponseEntity<ServiceOrderDTO> update(@PathVariable Long id,
             @Valid @RequestBody UpdateServiceOrderDTO updateServiceOrderDTO) {
         ServiceOrderDTO updatedServiceOrder = serviceOrderService.update(id, updateServiceOrderDTO);
@@ -76,6 +83,7 @@ public class ServiceOrderController {
     }
 
     @PatchMapping("/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'TECNICO')")
     public ResponseEntity<ServiceOrderDTO> updateStatus(@PathVariable Long id,
             @Valid @RequestBody UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO) {
         ServiceOrderDTO updatedServiceOrder = serviceOrderService.updateStatus(id, updateServiceOrderStatusDTO);
@@ -84,6 +92,7 @@ public class ServiceOrderController {
     }
 
     @GetMapping("/{id}/status-history")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE', 'TECNICO')")
     public ResponseEntity<List<ServiceOrderStatusHistoryDTO>> findStatusHistory(@PathVariable Long id) {
         List<ServiceOrderStatusHistoryDTO> statusHistory = serviceOrderService.findStatusHistory(id);
 
@@ -91,6 +100,7 @@ public class ServiceOrderController {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         serviceOrderService.delete(id);
 

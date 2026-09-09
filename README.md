@@ -28,6 +28,7 @@ O backend foi pensado para ser consumido futuramente por uma aplicação web, mo
 - Bean Validation
 - H2 para testes de integração
 - Flyway para migrações de banco de dados
+- Spring Security e JWT
 - Springdoc OpenAPI / Swagger UI
 
 ## Arquitetura
@@ -71,6 +72,12 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | `PATCH` | `/service-orders/{id}/status` | Atualiza somente o status da ordem |
 | `GET` | `/service-orders/{id}/status-history` | Consulta o histórico de mudanças de status |
 | `DELETE` | `/service-orders/{id}` | Exclui uma ordem em situação permitida |
+
+### Autenticação
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `POST` | `/auth/login` | Autentica um usuário e retorna um JWT |
 
 Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
 
@@ -154,6 +161,10 @@ Configure as variáveis de ambiente usadas pela aplicação:
 DATA_BASE_URL=jdbc:postgresql://localhost:5432/nexos
 DATA_BASE_USERNAME=postgres
 DATA_BASE_PASSWORD=sua_senha
+JWT_SECRET=uma-chave-secreta-com-no-minimo-32-caracteres
+ADMIN_NAME=Administrador NexOS
+ADMIN_EMAIL=admin@nexos.local
+ADMIN_PASSWORD=uma-senha-inicial-segura
 ```
 
 Depois, inicie a API usando o Maven Wrapper:
@@ -164,9 +175,41 @@ Depois, inicie a API usando o Maven Wrapper:
 
 A aplicação será iniciada, por padrão, em `http://localhost:8080`.
 
+As três variáveis `ADMIN_*` são usadas somente para criar o primeiro administrador, caso ele ainda não exista. Não as inclua no controle de versão.
+
+## Segurança e acesso
+
+A API é stateless e exige um token JWT para todas as rotas de clientes e ordens de serviço. O login é público:
+
+```http
+POST /auth/login
+Content-Type: application/json
+```
+
+```json
+{
+  "email": "admin@nexos.local",
+  "senha": "uma-senha-inicial-segura"
+}
+```
+
+Use o token retornado em cada requisição protegida:
+
+```http
+Authorization: Bearer <token>
+```
+
+| Papel | Permissões |
+| --- | --- |
+| `ADMIN` | Acesso total, incluindo exclusões |
+| `ATENDENTE` | Gerencia clientes, consulta informações e abre ordens |
+| `TECNICO` | Consulta clientes e ordens; atualiza dados técnicos e status |
+
+As senhas são armazenadas com hash BCrypt. O JWT tem validade configurável, atualmente de duas horas.
+
 ## Migrações de banco de dados
 
-O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, e a `V2__create_service_order_status_history.sql` adiciona o histórico de status. As migrações também criam índices usados nas consultas por cliente, status e data de abertura.
+O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, a `V2__create_service_order_status_history.sql` adiciona o histórico de status e a `V3__create_users.sql` adiciona usuários e seus papéis. As migrações também criam índices usados nas consultas por cliente, status e data de abertura.
 
 O Hibernate utiliza `ddl-auto=validate`: ele confere se as entidades correspondem ao schema, mas não cria nem altera tabelas. Toda evolução estrutural deve ser adicionada como uma nova migração em `src/main/resources/db/migration`.
 
@@ -179,7 +222,7 @@ Com a aplicação em execução, a documentação pode ser acessada em:
 - Swagger UI: `http://localhost:8080/swagger-ui/index.html`
 - Especificação OpenAPI em JSON: `http://localhost:8080/v3/api-docs`
 
-O Swagger UI permite visualizar contratos, campos, respostas e executar requisições diretamente pelo navegador.
+O Swagger UI permite visualizar contratos, campos, respostas e executar requisições diretamente pelo navegador. Para testar rotas protegidas, use o botão **Authorize** e informe `Bearer <token>`.
 
 ## Testes
 
@@ -189,7 +232,7 @@ O projeto possui testes de integração para os endpoints de clientes, ordens de
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 38 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico e transições de status inválidas.
+Atualmente, a suíte possui 43 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -204,11 +247,13 @@ Atualmente, a suíte possui 38 testes automatizados cobrindo cenários de sucess
 9. **Filtros de ordens** — Consulta combinável por cliente, status e período de abertura, com validação de intervalo de datas.
 10. **Migrações versionadas** — Flyway assume a criação e evolução do schema, enquanto o Hibernate valida a compatibilidade das entidades.
 11. **Histórico de status** — Cada transição válida é auditada com os estados anterior e novo, além do instante da alteração.
+12. **Autenticação e autorização** — Login JWT, senhas protegidas com BCrypt e permissões definidas por papel de usuário.
 
 ## Próximas evoluções
 
-- autenticação e autorização;
 - cadastro de técnicos e acompanhamento de custos/lucro.
+- renovação e revogação de tokens;
+- gerenciamento administrativo de usuários e papéis.
 
 ## Autor
 
