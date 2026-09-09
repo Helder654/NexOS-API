@@ -27,6 +27,7 @@ O backend foi pensado para ser consumido futuramente por uma aplicação web, mo
 - Lombok
 - Bean Validation
 - H2 para testes de integração
+- Flyway para migrações de banco de dados
 - Springdoc OpenAPI / Swagger UI
 
 ## Arquitetura
@@ -160,6 +161,14 @@ Depois, inicie a API usando o Maven Wrapper:
 
 A aplicação será iniciada, por padrão, em `http://localhost:8080`.
 
+## Migrações de banco de dados
+
+O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, além dos índices usados nas consultas por cliente, status e data de abertura.
+
+O Hibernate utiliza `ddl-auto=validate`: ele confere se as entidades correspondem ao schema, mas não cria nem altera tabelas. Toda evolução estrutural deve ser adicionada como uma nova migração em `src/main/resources/db/migration`.
+
+Para compatibilidade com um banco local já criado antes da adoção do Flyway, a aplicação usa `baseline-on-migrate=true`. Em ambientes com dados importantes, faça backup e revise a migração antes da primeira execução.
+
 ## Documentação interativa
 
 Com a aplicação em execução, a documentação pode ser acessada em:
@@ -177,7 +186,7 @@ O projeto possui testes de integração para os endpoints de clientes, ordens de
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 35 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros e transições de status inválidas.
+Atualmente, a suíte possui 36 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -190,10 +199,10 @@ Atualmente, a suíte possui 35 testes automatizados cobrindo cenários de sucess
 7. **Exclusão segura de ordens** — Regra de negócio que permite remover somente ordens abertas ou canceladas, preservando ordens que já avançaram no atendimento.
 8. **Paginação e ordenação** — Listagens preparadas para crescer, com metadados de navegação e ordenação configurável.
 9. **Filtros de ordens** — Consulta combinável por cliente, status e período de abertura, com validação de intervalo de datas.
+10. **Migrações versionadas** — Flyway assume a criação e evolução do schema, enquanto o Hibernate valida a compatibilidade das entidades.
 
 ## Próximas evoluções
 
-- migrações de banco com Flyway;
 - autenticação e autorização;
 - histórico de atualizações da ordem;
 - cadastro de técnicos e acompanhamento de custos/lucro.
