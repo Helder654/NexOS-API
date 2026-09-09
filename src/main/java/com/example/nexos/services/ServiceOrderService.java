@@ -10,6 +10,7 @@ import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.exceptions.InvalidServiceOrderStatusException;
+import com.example.nexos.exceptions.InvalidServiceOrderDeletionException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ServiceOrderMapper;
 import com.example.nexos.models.ClientModel;
@@ -79,6 +80,17 @@ public class ServiceOrderService {
         ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
 
         return serviceOrderMapper.map(updatedServiceOrder);
+    }
+
+    public void delete(Long id) {
+        ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+
+        if (!serviceOrderModel.getStatus().canBeDeleted()) {
+            throw new InvalidServiceOrderDeletionException(
+                    "A ordem de serviço com status " + serviceOrderModel.getStatus() + " não pode ser excluída");
+        }
+
+        serviceOrderRepository.delete(serviceOrderModel);
     }
 
     private ServiceOrderModel findServiceOrderModelById(Long id) {

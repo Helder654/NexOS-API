@@ -68,10 +68,13 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | `GET` | `/service-orders/{id}` | Busca uma ordem por ID |
 | `PUT` | `/service-orders/{id}` | Atualiza dados técnicos e financeiros da ordem |
 | `PATCH` | `/service-orders/{id}/status` | Atualiza somente o status da ordem |
+| `DELETE` | `/service-orders/{id}` | Exclui uma ordem em situação permitida |
 
 Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
 
 O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
+
+Uma ordem pode ser excluída somente enquanto estiver `ABERTA` ou depois de `CANCELADA`. Ordens em análise, reparo ou já finalizadas preservam seu histórico e retornam `409 Conflict` caso a exclusão seja solicitada.
 
 ## Fluxo de status da ordem
 
@@ -163,10 +166,10 @@ Atualmente, a suíte possui 27 testes automatizados cobrindo cenários de sucess
 4. **Consulta e atualização de ordens** — Busca por ID, listagem e atualização de informações técnicas e financeiras preservando dados sensíveis do fluxo.
 5. **Fluxo de status** — Endpoint específico para status e regras explícitas que impedem saltos de etapas ou reabertura de ordens encerradas.
 6. **Documentação e qualidade** — Swagger/OpenAPI configurado e testes de integração cobrindo o comportamento público da API.
+7. **Exclusão segura de ordens** — Regra de negócio que permite remover somente ordens abertas ou canceladas, preservando ordens que já avançaram no atendimento.
 
 ## Próximas evoluções
 
-- exclusão de ordem de serviço, com regras de integridade;
 - filtros e paginação para consultas;
 - migrações de banco com Flyway;
 - autenticação e autorização;

@@ -3,7 +3,9 @@ package com.example.nexos.controllers;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -280,6 +282,53 @@ class ServiceOrderControllerIntegrationTests {
                           "status": "EM_ANALISE"
                         }
                         """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
+    }
+
+    @Test
+    void shouldDeleteOpenServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(delete("/service-orders/{id}", serviceOrderModel.getId()))
+                .andExpect(status().isNoContent());
+
+        assertThat(serviceOrderRepository.existsById(serviceOrderModel.getId())).isFalse();
+    }
+
+    @Test
+    void shouldDeleteCancelledServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setStatus(ServiceOrderStatus.CANCELADA);
+        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(delete("/service-orders/{id}", serviceOrderModel.getId()))
+                .andExpect(status().isNoContent());
+    }
+
+    @Test
+    void shouldRejectDeletionOfServiceOrderInProgress() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setStatus(ServiceOrderStatus.EM_ANALISE);
+        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(delete("/service-orders/{id}", serviceOrderModel.getId()))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.title").value("Exclusão de ordem não permitida"))
+                .andExpect(jsonPath("$.detail").value("A ordem de serviço com status EM_ANALISE não pode ser excluída"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingNonexistentServiceOrder() throws Exception {
+        mockMvc.perform(delete("/service-orders/{id}", 999L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));

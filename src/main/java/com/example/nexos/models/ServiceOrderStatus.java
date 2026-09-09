@@ -17,4 +17,8 @@ public enum ServiceOrderStatus {
             case FINALIZADA, CANCELADA -> false;
         };
     }
+
+    public boolean canBeDeleted() {
+        return this == ABERTA || this == CANCELADA;
+    }
 }

@@ -24,4 +24,12 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(InvalidServiceOrderDeletionException.class)
+    public ProblemDetail handleInvalidServiceOrderDeletion(InvalidServiceOrderDeletionException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("Exclusão de ordem não permitida");
+
+        return problemDetail;
+    }
+
 }
