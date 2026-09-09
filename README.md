@@ -54,7 +54,7 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | Método | Rota | Descrição |
 | --- | --- | --- |
 | `POST` | `/clients` | Cadastra um cliente |
-| `GET` | `/clients` | Lista todos os clientes |
+| `GET` | `/clients` | Lista clientes de forma paginada |
 | `GET` | `/clients/{id}` | Busca um cliente por ID |
 | `PUT` | `/clients/{id}` | Atualiza os dados de um cliente |
 | `DELETE` | `/clients/{id}` | Remove um cliente |
@@ -64,7 +64,7 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | Método | Rota | Descrição |
 | --- | --- | --- |
 | `POST` | `/service-orders` | Abre uma ordem de serviço |
-| `GET` | `/service-orders` | Lista as ordens abertas no sistema |
+| `GET` | `/service-orders` | Lista ordens de serviço de forma paginada |
 | `GET` | `/service-orders/{id}` | Busca uma ordem por ID |
 | `PUT` | `/service-orders/{id}` | Atualiza dados técnicos e financeiros da ordem |
 | `PATCH` | `/service-orders/{id}/status` | Atualiza somente o status da ordem |
@@ -75,6 +75,17 @@ Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definid
 O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
 
 Uma ordem pode ser excluída somente enquanto estiver `ABERTA` ou depois de `CANCELADA`. Ordens em análise, reparo ou já finalizadas preservam seu histórico e retornam `409 Conflict` caso a exclusão seja solicitada.
+
+## Paginação e ordenação
+
+As listagens de clientes e ordens de serviço aceitam os parâmetros `page`, `size` e `sort`. A resposta inclui os registros em `content` e metadados como página atual, total de elementos e total de páginas.
+
+```text
+GET /clients?page=0&size=10&sort=nome,asc
+GET /service-orders?page=0&size=10&sort=dataAbertura,desc
+```
+
+Sem parâmetros, a API retorna a primeira página com até 10 registros. Clientes são ordenados por `id` e ordens por data de abertura decrescente.
 
 ## Fluxo de status da ordem
 
@@ -156,7 +167,7 @@ O projeto possui testes de integração para os endpoints de clientes, ordens de
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 27 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes e transições de status inválidas.
+Atualmente, a suíte possui 33 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -167,10 +178,11 @@ Atualmente, a suíte possui 27 testes automatizados cobrindo cenários de sucess
 5. **Fluxo de status** — Endpoint específico para status e regras explícitas que impedem saltos de etapas ou reabertura de ordens encerradas.
 6. **Documentação e qualidade** — Swagger/OpenAPI configurado e testes de integração cobrindo o comportamento público da API.
 7. **Exclusão segura de ordens** — Regra de negócio que permite remover somente ordens abertas ou canceladas, preservando ordens que já avançaram no atendimento.
+8. **Paginação e ordenação** — Listagens preparadas para crescer, com metadados de navegação e ordenação configurável.
 
 ## Próximas evoluções
 
-- filtros e paginação para consultas;
+- filtros para consultas;
 - migrações de banco com Flyway;
 - autenticação e autorização;
 - histórico de atualizações da ordem;

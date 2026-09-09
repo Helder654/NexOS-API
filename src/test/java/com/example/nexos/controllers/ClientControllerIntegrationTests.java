@@ -7,7 +7,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -100,7 +99,9 @@ class ClientControllerIntegrationTests {
     void shouldReturnEmptyClientList() throws Exception {
         mockMvc.perform(get("/clients"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     @Test
@@ -111,7 +112,27 @@ class ClientControllerIntegrationTests {
 
         mockMvc.perform(get("/clients"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void shouldReturnPaginatedAndSortedClients() throws Exception {
+        clientRepository.saveAll(List.of(
+                new ClientModel(null, "Carlos Lima", "(11) 97777-7777", "carlos.lima@example.com"),
+                new ClientModel(null, "Ana Souza", "(11) 99999-9999", "ana.souza@example.com"),
+                new ClientModel(null, "Bruno Lima", "(11) 98888-8888", "bruno.lima@example.com")));
+
+        mockMvc.perform(get("/clients?page=1&size=1&sort=nome,asc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].nome").value("Bruno Lima"))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(3))
+                .andExpect(jsonPath("$.first").value(false))
+                .andExpect(jsonPath("$.last").value(false));
     }
 
     @Test

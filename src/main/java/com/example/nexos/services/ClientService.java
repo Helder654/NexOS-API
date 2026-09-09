@@ -1,11 +1,12 @@
 package com.example.nexos.services;
 
-import java.util.List;
-
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.example.nexos.dtos.ClientDTO;
 import com.example.nexos.dtos.CreateClientDTO;
+import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.UpdateClientDTO;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ClientMapper;
@@ -34,11 +35,11 @@ public class ClientService {
         return clientMapper.map(findClientModelById(id));
     }
 
-    public List<ClientDTO> findAll() {
-        return clientRepository.findAll()
-                .stream()
-                .map(clientMapper::map)
-                .toList();
+    public PageResponseDTO<ClientDTO> findAll(Pageable pageable) {
+        Page<ClientDTO> clientPage = clientRepository.findAll(pageable)
+                .map(clientMapper::map);
+
+        return PageResponseDTO.from(clientPage);
     }
 
     public ClientDTO update(Long id, UpdateClientDTO updateClientDTO) {

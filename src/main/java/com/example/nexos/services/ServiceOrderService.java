@@ -1,11 +1,12 @@
 package com.example.nexos.services;
 
 import java.time.LocalDateTime;
-import java.util.List;
-
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
+import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
@@ -51,11 +52,11 @@ public class ServiceOrderService {
         return serviceOrderMapper.map(findServiceOrderModelById(id));
     }
 
-    public List<ServiceOrderDTO> findAll() {
-        return serviceOrderRepository.findAll()
-                .stream()
-                .map(serviceOrderMapper::map)
-                .toList();
+    public PageResponseDTO<ServiceOrderDTO> findAll(Pageable pageable) {
+        Page<ServiceOrderDTO> serviceOrderPage = serviceOrderRepository.findAll(pageable)
+                .map(serviceOrderMapper::map);
+
+        return PageResponseDTO.from(serviceOrderPage);
     }
 
     public ServiceOrderDTO update(Long id, UpdateServiceOrderDTO updateServiceOrderDTO) {

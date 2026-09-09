@@ -9,7 +9,6 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -139,7 +138,9 @@ class ServiceOrderControllerIntegrationTests {
     void shouldReturnEmptyServiceOrderList() throws Exception {
         mockMvc.perform(get("/service-orders"))
                 .andExpect(status().isOk())
-                .andExpect(content().json("[]"));
+                .andExpect(jsonPath("$.content").isEmpty())
+                .andExpect(jsonPath("$.page").value(0))
+                .andExpect(jsonPath("$.totalElements").value(0));
     }
 
     @Test
@@ -153,7 +154,32 @@ class ServiceOrderControllerIntegrationTests {
 
         mockMvc.perform(get("/service-orders"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(2));
+                .andExpect(jsonPath("$.content.length()").value(2))
+                .andExpect(jsonPath("$.totalElements").value(2));
+    }
+
+    @Test
+    void shouldReturnPaginatedAndSortedServiceOrders() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel firstServiceOrder = saveServiceOrder(clientModel);
+        firstServiceOrder.setConsole("Nintendo Switch");
+        serviceOrderRepository.save(firstServiceOrder);
+        ServiceOrderModel secondServiceOrder = saveServiceOrder(clientModel);
+        secondServiceOrder.setConsole("PlayStation 5");
+        serviceOrderRepository.save(secondServiceOrder);
+        ServiceOrderModel thirdServiceOrder = saveServiceOrder(clientModel);
+        thirdServiceOrder.setConsole("Xbox Series X");
+        serviceOrderRepository.save(thirdServiceOrder);
+
+        mockMvc.perform(get("/service-orders?page=1&size=1&sort=console,desc"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].console").value("PlayStation 5"))
+                .andExpect(jsonPath("$.page").value(1))
+                .andExpect(jsonPath("$.size").value(1))
+                .andExpect(jsonPath("$.totalElements").value(3))
+                .andExpect(jsonPath("$.totalPages").value(3));
     }
 
     @Test
