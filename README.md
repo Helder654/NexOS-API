@@ -87,6 +87,16 @@ GET /service-orders?page=0&size=10&sort=dataAbertura,desc
 
 Sem parâmetros, a API retorna a primeira página com até 10 registros. Clientes são ordenados por `id` e ordens por data de abertura decrescente.
 
+## Filtros de ordens de serviço
+
+O endpoint de listagem de ordens pode combinar filtros com paginação e ordenação:
+
+```text
+GET /service-orders?clienteId=1&status=EM_ANALISE&dataAberturaInicial=2026-01-01&dataAberturaFinal=2026-01-31&page=0&size=10
+```
+
+Filtros disponíveis: `clienteId`, `status`, `dataAberturaInicial` e `dataAberturaFinal`. Datas devem usar o formato `yyyy-MM-dd`; o período é inclusivo e a data inicial não pode ser posterior à final.
+
 ## Fluxo de status da ordem
 
 ```text
@@ -167,7 +177,7 @@ O projeto possui testes de integração para os endpoints de clientes, ordens de
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 33 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação e transições de status inválidas.
+Atualmente, a suíte possui 35 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -179,10 +189,10 @@ Atualmente, a suíte possui 33 testes automatizados cobrindo cenários de sucess
 6. **Documentação e qualidade** — Swagger/OpenAPI configurado e testes de integração cobrindo o comportamento público da API.
 7. **Exclusão segura de ordens** — Regra de negócio que permite remover somente ordens abertas ou canceladas, preservando ordens que já avançaram no atendimento.
 8. **Paginação e ordenação** — Listagens preparadas para crescer, com metadados de navegação e ordenação configurável.
+9. **Filtros de ordens** — Consulta combinável por cliente, status e período de abertura, com validação de intervalo de datas.
 
 ## Próximas evoluções
 
-- filtros para consultas;
 - migrações de banco com Flyway;
 - autenticação e autorização;
 - histórico de atualizações da ordem;

@@ -1,6 +1,7 @@
 package com.example.nexos.controllers;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -180,6 +181,45 @@ class ServiceOrderControllerIntegrationTests {
                 .andExpect(jsonPath("$.size").value(1))
                 .andExpect(jsonPath("$.totalElements").value(3))
                 .andExpect(jsonPath("$.totalPages").value(3));
+    }
+
+    @Test
+    void shouldFilterServiceOrders() throws Exception {
+        ClientModel firstClient = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ClientModel secondClient = clientRepository.save(new ClientModel(null, "Bruno Lima", "(11) 98888-8888",
+                "bruno.lima@example.com"));
+
+        ServiceOrderModel matchingServiceOrder = saveServiceOrder(firstClient);
+        matchingServiceOrder.setStatus(ServiceOrderStatus.EM_ANALISE);
+        matchingServiceOrder.setDataAbertura(LocalDateTime.of(2026, 1, 15, 10, 0));
+        serviceOrderRepository.save(matchingServiceOrder);
+
+        ServiceOrderModel differentDateServiceOrder = saveServiceOrder(firstClient);
+        differentDateServiceOrder.setStatus(ServiceOrderStatus.EM_ANALISE);
+        differentDateServiceOrder.setDataAbertura(LocalDateTime.of(2026, 2, 15, 10, 0));
+        serviceOrderRepository.save(differentDateServiceOrder);
+
+        ServiceOrderModel differentClientServiceOrder = saveServiceOrder(secondClient);
+        differentClientServiceOrder.setStatus(ServiceOrderStatus.EM_ANALISE);
+        differentClientServiceOrder.setDataAbertura(LocalDateTime.of(2026, 1, 20, 10, 0));
+        serviceOrderRepository.save(differentClientServiceOrder);
+
+        mockMvc.perform(get("/service-orders?clienteId=%d&status=EM_ANALISE&dataAberturaInicial=%s&dataAberturaFinal=%s"
+                .formatted(firstClient.getId(), LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].id").value(matchingServiceOrder.getId()))
+                .andExpect(jsonPath("$.totalElements").value(1));
+    }
+
+    @Test
+    void shouldRejectServiceOrderFilterWithInvertedDates() throws Exception {
+        mockMvc.perform(get("/service-orders?dataAberturaInicial=2026-02-01&dataAberturaFinal=2026-01-31"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.title").value("Filtro de ordem inválido"))
+                .andExpect(jsonPath("$.detail").value("A data inicial não pode ser posterior à data final"));
     }
 
     @Test

@@ -8,10 +8,12 @@ import org.springframework.data.domain.Pageable;
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
+import com.example.nexos.dtos.ServiceOrderFilterDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.exceptions.InvalidServiceOrderStatusException;
 import com.example.nexos.exceptions.InvalidServiceOrderDeletionException;
+import com.example.nexos.exceptions.InvalidServiceOrderFilterException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ServiceOrderMapper;
 import com.example.nexos.models.ClientModel;
@@ -19,6 +21,7 @@ import com.example.nexos.models.ServiceOrderModel;
 import com.example.nexos.models.ServiceOrderStatus;
 import com.example.nexos.repositories.ClientRepository;
 import com.example.nexos.repositories.ServiceOrderRepository;
+import com.example.nexos.specifications.ServiceOrderSpecification;
 
 @Service
 public class ServiceOrderService {
@@ -52,8 +55,11 @@ public class ServiceOrderService {
         return serviceOrderMapper.map(findServiceOrderModelById(id));
     }
 
-    public PageResponseDTO<ServiceOrderDTO> findAll(Pageable pageable) {
-        Page<ServiceOrderDTO> serviceOrderPage = serviceOrderRepository.findAll(pageable)
+    public PageResponseDTO<ServiceOrderDTO> findAll(ServiceOrderFilterDTO serviceOrderFilterDTO, Pageable pageable) {
+        validateFilter(serviceOrderFilterDTO);
+
+        Page<ServiceOrderDTO> serviceOrderPage = serviceOrderRepository
+                .findAll(ServiceOrderSpecification.withFilters(serviceOrderFilterDTO), pageable)
                 .map(serviceOrderMapper::map);
 
         return PageResponseDTO.from(serviceOrderPage);
@@ -98,6 +104,15 @@ public class ServiceOrderService {
         return serviceOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Ordem de serviço com id " + id + " não foi encontrada"));
+    }
+
+    private void validateFilter(ServiceOrderFilterDTO serviceOrderFilterDTO) {
+        if (serviceOrderFilterDTO.getDataAberturaInicial() != null
+                && serviceOrderFilterDTO.getDataAberturaFinal() != null
+                && serviceOrderFilterDTO.getDataAberturaInicial().isAfter(serviceOrderFilterDTO.getDataAberturaFinal())) {
+            throw new InvalidServiceOrderFilterException(
+                    "A data inicial não pode ser posterior à data final");
+        }
     }
 
 }

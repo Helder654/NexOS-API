@@ -32,4 +32,12 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(InvalidServiceOrderFilterException.class)
+    public ProblemDetail handleInvalidServiceOrderFilter(InvalidServiceOrderFilterException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+        problemDetail.setTitle("Filtro de ordem inválido");
+
+        return problemDetail;
+    }
+
 }

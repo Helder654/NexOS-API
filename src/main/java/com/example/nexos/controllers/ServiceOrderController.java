@@ -8,6 +8,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -20,6 +21,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
+import com.example.nexos.dtos.ServiceOrderFilterDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.services.ServiceOrderService;
@@ -56,8 +58,9 @@ public class ServiceOrderController {
 
     @GetMapping
     public ResponseEntity<PageResponseDTO<ServiceOrderDTO>> findAll(
+            @ModelAttribute ServiceOrderFilterDTO serviceOrderFilterDTO,
             @PageableDefault(size = 10, sort = "dataAbertura", direction = Sort.Direction.DESC) Pageable pageable) {
-        PageResponseDTO<ServiceOrderDTO> serviceOrders = serviceOrderService.findAll(pageable);
+        PageResponseDTO<ServiceOrderDTO> serviceOrders = serviceOrderService.findAll(serviceOrderFilterDTO, pageable);
 
         return ResponseEntity.ok(serviceOrders);
     }
