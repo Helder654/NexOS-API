@@ -49,6 +49,11 @@ public class ClientService {
         return clientMapper.map(updatedClient);
     }
 
+    public void delete(Long id) {
+        ClientModel clientModel = findClientModelById(id);
+        clientRepository.delete(clientModel);
+    }
+
     private ClientModel findClientModelById(Long id) {
         return clientRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Cliente com id " + id + " não foi encontrado"));

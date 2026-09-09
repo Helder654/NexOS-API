@@ -2,6 +2,8 @@ package com.example.nexos.controllers;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -158,6 +160,25 @@ class ClientControllerIntegrationTests {
                           "email": "ana.silva@example.com"
                         }
                         """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Cliente com id 999 não foi encontrado"));
+    }
+
+    @Test
+    void shouldDeleteClient() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+
+        mockMvc.perform(delete("/clients/{id}", clientModel.getId()))
+                .andExpect(status().isNoContent());
+
+        assertTrue(clientRepository.findById(clientModel.getId()).isEmpty());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenDeletingNonexistentClient() throws Exception {
+        mockMvc.perform(delete("/clients/{id}", 999L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.detail").value("Cliente com id 999 não foi encontrado"));
