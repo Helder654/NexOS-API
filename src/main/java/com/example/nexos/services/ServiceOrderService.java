@@ -1,14 +1,18 @@
 package com.example.nexos.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderFilterDTO;
+import com.example.nexos.dtos.ServiceOrderStatusHistoryDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.exceptions.InvalidServiceOrderStatusException;
@@ -16,11 +20,13 @@ import com.example.nexos.exceptions.InvalidServiceOrderDeletionException;
 import com.example.nexos.exceptions.InvalidServiceOrderFilterException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ServiceOrderMapper;
+import com.example.nexos.mappers.ServiceOrderStatusHistoryMapper;
 import com.example.nexos.models.ClientModel;
 import com.example.nexos.models.ServiceOrderModel;
 import com.example.nexos.models.ServiceOrderStatus;
 import com.example.nexos.repositories.ClientRepository;
 import com.example.nexos.repositories.ServiceOrderRepository;
+import com.example.nexos.repositories.ServiceOrderStatusHistoryRepository;
 import com.example.nexos.specifications.ServiceOrderSpecification;
 
 @Service
@@ -29,12 +35,17 @@ public class ServiceOrderService {
     private final ServiceOrderRepository serviceOrderRepository;
     private final ClientRepository clientRepository;
     private final ServiceOrderMapper serviceOrderMapper;
+    private final ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository;
+    private final ServiceOrderStatusHistoryMapper serviceOrderStatusHistoryMapper;
 
     public ServiceOrderService(ServiceOrderRepository serviceOrderRepository, ClientRepository clientRepository,
-            ServiceOrderMapper serviceOrderMapper) {
+            ServiceOrderMapper serviceOrderMapper, ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository,
+            ServiceOrderStatusHistoryMapper serviceOrderStatusHistoryMapper) {
         this.serviceOrderRepository = serviceOrderRepository;
         this.clientRepository = clientRepository;
         this.serviceOrderMapper = serviceOrderMapper;
+        this.serviceOrderStatusHistoryRepository = serviceOrderStatusHistoryRepository;
+        this.serviceOrderStatusHistoryMapper = serviceOrderStatusHistoryMapper;
     }
 
     public ServiceOrderDTO create(CreateServiceOrderDTO createServiceOrderDTO) {
@@ -74,21 +85,26 @@ public class ServiceOrderService {
         return serviceOrderMapper.map(updatedServiceOrder);
     }
 
+    @Transactional
     public ServiceOrderDTO updateStatus(Long id, UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO) {
         ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+        ServiceOrderStatus previousStatus = serviceOrderModel.getStatus();
         ServiceOrderStatus newStatus = updateServiceOrderStatusDTO.getStatus();
 
-        if (!serviceOrderModel.getStatus().canTransitionTo(newStatus)) {
+        if (!previousStatus.canTransitionTo(newStatus)) {
             throw new InvalidServiceOrderStatusException(
-                    "Não é possível alterar o status de " + serviceOrderModel.getStatus() + " para " + newStatus);
+                    "Não é possível alterar o status de " + previousStatus + " para " + newStatus);
         }
 
         serviceOrderModel.setStatus(newStatus);
         ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
+        serviceOrderStatusHistoryRepository.save(
+                serviceOrderStatusHistoryMapper.map(updatedServiceOrder, previousStatus, newStatus));
 
         return serviceOrderMapper.map(updatedServiceOrder);
     }
 
+    @Transactional
     public void delete(Long id) {
         ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
 
@@ -97,7 +113,17 @@ public class ServiceOrderService {
                     "A ordem de serviço com status " + serviceOrderModel.getStatus() + " não pode ser excluída");
         }
 
+        serviceOrderStatusHistoryRepository.deleteByServiceOrderId(id);
         serviceOrderRepository.delete(serviceOrderModel);
+    }
+
+    public List<ServiceOrderStatusHistoryDTO> findStatusHistory(Long id) {
+        findServiceOrderModelById(id);
+
+        return serviceOrderStatusHistoryRepository.findByServiceOrderIdOrderByDataAlteracaoDesc(id)
+                .stream()
+                .map(serviceOrderStatusHistoryMapper::map)
+                .toList();
     }
 
     private ServiceOrderModel findServiceOrderModelById(Long id) {

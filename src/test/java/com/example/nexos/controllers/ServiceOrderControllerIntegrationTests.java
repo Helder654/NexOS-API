@@ -28,6 +28,7 @@ import com.example.nexos.models.ServiceOrderModel;
 import com.example.nexos.models.ServiceOrderStatus;
 import com.example.nexos.repositories.ClientRepository;
 import com.example.nexos.repositories.ServiceOrderRepository;
+import com.example.nexos.repositories.ServiceOrderStatusHistoryRepository;
 
 @SpringBootTest
 class ServiceOrderControllerIntegrationTests {
@@ -41,11 +42,15 @@ class ServiceOrderControllerIntegrationTests {
     @Autowired
     private ServiceOrderRepository serviceOrderRepository;
 
+    @Autowired
+    private ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        serviceOrderStatusHistoryRepository.deleteAll();
         serviceOrderRepository.deleteAll();
         clientRepository.deleteAll();
     }
@@ -370,11 +375,21 @@ class ServiceOrderControllerIntegrationTests {
         ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
                 "ana.souza@example.com"));
         ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
-        serviceOrderModel.setStatus(ServiceOrderStatus.CANCELADA);
-        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "CANCELADA"
+                        }
+                        """))
+                .andExpect(status().isOk());
 
         mockMvc.perform(delete("/service-orders/{id}", serviceOrderModel.getId()))
                 .andExpect(status().isNoContent());
+
+        assertThat(serviceOrderStatusHistoryRepository
+                .findByServiceOrderIdOrderByDataAlteracaoDesc(serviceOrderModel.getId())).isEmpty();
     }
 
     @Test
@@ -395,6 +410,47 @@ class ServiceOrderControllerIntegrationTests {
     @Test
     void shouldReturnNotFoundWhenDeletingNonexistentServiceOrder() throws Exception {
         mockMvc.perform(delete("/service-orders/{id}", 999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
+    }
+
+    @Test
+    void shouldReturnServiceOrderStatusHistory() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "EM_ANALISE"
+                        }
+                        """))
+                .andExpect(status().isOk());
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "AGUARDANDO_APROVACAO"
+                        }
+                        """))
+                .andExpect(status().isOk());
+
+        mockMvc.perform(get("/service-orders/{id}/status-history", serviceOrderModel.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].statusAnterior").value("EM_ANALISE"))
+                .andExpect(jsonPath("$[0].statusNovo").value("AGUARDANDO_APROVACAO"))
+                .andExpect(jsonPath("$[1].statusAnterior").value("ABERTA"))
+                .andExpect(jsonPath("$[1].statusNovo").value("EM_ANALISE"))
+                .andExpect(jsonPath("$[0].dataAlteracao").exists());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenSearchingHistoryOfNonexistentServiceOrder() throws Exception {
+        mockMvc.perform(get("/service-orders/{id}/status-history", 999L))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));

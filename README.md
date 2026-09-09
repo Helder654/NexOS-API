@@ -69,6 +69,7 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | `GET` | `/service-orders/{id}` | Busca uma ordem por ID |
 | `PUT` | `/service-orders/{id}` | Atualiza dados técnicos e financeiros da ordem |
 | `PATCH` | `/service-orders/{id}/status` | Atualiza somente o status da ordem |
+| `GET` | `/service-orders/{id}/status-history` | Consulta o histórico de mudanças de status |
 | `DELETE` | `/service-orders/{id}` | Exclui uma ordem em situação permitida |
 
 Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
@@ -106,6 +107,8 @@ ABERTA → EM_ANALISE → AGUARDANDO_APROVACAO → EM_REPARO → FINALIZADA
 ```
 
 O cancelamento é permitido antes da finalização. Estados `FINALIZADA` e `CANCELADA` são finais. Uma transição inválida retorna `409 Conflict` com uma mensagem explicativa.
+
+Cada transição válida é registrada com status anterior, novo status e data da alteração. O histórico pode ser consultado em `GET /service-orders/{id}/status-history` e é removido somente quando uma ordem que pode ser excluída é apagada junto com seus registros relacionados.
 
 ## Validações e respostas de erro
 
@@ -163,7 +166,7 @@ A aplicação será iniciada, por padrão, em `http://localhost:8080`.
 
 ## Migrações de banco de dados
 
-O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, além dos índices usados nas consultas por cliente, status e data de abertura.
+O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, e a `V2__create_service_order_status_history.sql` adiciona o histórico de status. As migrações também criam índices usados nas consultas por cliente, status e data de abertura.
 
 O Hibernate utiliza `ddl-auto=validate`: ele confere se as entidades correspondem ao schema, mas não cria nem altera tabelas. Toda evolução estrutural deve ser adicionada como uma nova migração em `src/main/resources/db/migration`.
 
@@ -186,7 +189,7 @@ O projeto possui testes de integração para os endpoints de clientes, ordens de
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 36 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco e transições de status inválidas.
+Atualmente, a suíte possui 38 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -200,11 +203,11 @@ Atualmente, a suíte possui 36 testes automatizados cobrindo cenários de sucess
 8. **Paginação e ordenação** — Listagens preparadas para crescer, com metadados de navegação e ordenação configurável.
 9. **Filtros de ordens** — Consulta combinável por cliente, status e período de abertura, com validação de intervalo de datas.
 10. **Migrações versionadas** — Flyway assume a criação e evolução do schema, enquanto o Hibernate valida a compatibilidade das entidades.
+11. **Histórico de status** — Cada transição válida é auditada com os estados anterior e novo, além do instante da alteração.
 
 ## Próximas evoluções
 
 - autenticação e autorização;
-- histórico de atualizações da ordem;
 - cadastro de técnicos e acompanhamento de custos/lucro.
 
 ## Autor

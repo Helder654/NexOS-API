@@ -1,6 +1,7 @@
 package com.example.nexos.controllers;
 
 import java.net.URI;
+import java.util.List;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
@@ -22,6 +23,7 @@ import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderFilterDTO;
+import com.example.nexos.dtos.ServiceOrderStatusHistoryDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.services.ServiceOrderService;
@@ -79,6 +81,13 @@ public class ServiceOrderController {
         ServiceOrderDTO updatedServiceOrder = serviceOrderService.updateStatus(id, updateServiceOrderStatusDTO);
 
         return ResponseEntity.ok(updatedServiceOrder);
+    }
+
+    @GetMapping("/{id}/status-history")
+    public ResponseEntity<List<ServiceOrderStatusHistoryDTO>> findStatusHistory(@PathVariable Long id) {
+        List<ServiceOrderStatusHistoryDTO> statusHistory = serviceOrderService.findStatusHistory(id);
+
+        return ResponseEntity.ok(statusHistory);
     }
 
     @DeleteMapping("/{id}")
