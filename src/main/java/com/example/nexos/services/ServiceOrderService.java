@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
+import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ServiceOrderMapper;
 import com.example.nexos.models.ClientModel;
@@ -52,6 +53,15 @@ public class ServiceOrderService {
                 .stream()
                 .map(serviceOrderMapper::map)
                 .toList();
+    }
+
+    public ServiceOrderDTO update(Long id, UpdateServiceOrderDTO updateServiceOrderDTO) {
+        ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+        serviceOrderMapper.updateModel(updateServiceOrderDTO, serviceOrderModel);
+
+        ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
+
+        return serviceOrderMapper.map(updatedServiceOrder);
     }
 
     private ServiceOrderModel findServiceOrderModelById(Long id) {

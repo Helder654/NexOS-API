@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -150,6 +151,70 @@ class ServiceOrderControllerIntegrationTests {
         mockMvc.perform(get("/service-orders"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void shouldUpdateServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(put("/service-orders/{id}", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "console": "Xbox Series X",
+                          "defeitoRelatado": "Desliga durante o jogo",
+                          "analiseTecnico": "Sistema de refrigeração revisado",
+                          "diagnostico": "Pasta térmica ressecada",
+                          "valor": 420.00,
+                          "custoReparo": 210.00
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(serviceOrderModel.getId()))
+                .andExpect(jsonPath("$.clienteId").value(clientModel.getId()))
+                .andExpect(jsonPath("$.console").value("Xbox Series X"))
+                .andExpect(jsonPath("$.defeitoRelatado").value("Desliga durante o jogo"))
+                .andExpect(jsonPath("$.analiseTecnico").value("Sistema de refrigeração revisado"))
+                .andExpect(jsonPath("$.diagnostico").value("Pasta térmica ressecada"))
+                .andExpect(jsonPath("$.valor").value(420.00))
+                .andExpect(jsonPath("$.custoReparo").value(210.00))
+                .andExpect(jsonPath("$.status").value("ABERTA"));
+    }
+
+    @Test
+    void shouldRejectInvalidServiceOrderUpdate() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(put("/service-orders/{id}", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "console": "",
+                          "defeitoRelatado": "",
+                          "valor": -1,
+                          "custoReparo": -1
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingNonexistentServiceOrder() throws Exception {
+        mockMvc.perform(put("/service-orders/{id}", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "console": "Xbox Series X",
+                          "defeitoRelatado": "Desliga durante o jogo"
+                        }
+                        """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
     }
 
     private ServiceOrderModel saveServiceOrder(ClientModel clientModel) {

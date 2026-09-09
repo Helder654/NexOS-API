@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
+import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.models.ClientModel;
 import com.example.nexos.models.ServiceOrderModel;
 
@@ -39,6 +40,15 @@ public class ServiceOrderMapper {
         serviceOrderDTO.setStatus(serviceOrderModel.getStatus());
 
         return serviceOrderDTO;
+    }
+
+    public void updateModel(UpdateServiceOrderDTO updateServiceOrderDTO, ServiceOrderModel serviceOrderModel) {
+        serviceOrderModel.setConsole(updateServiceOrderDTO.getConsole());
+        serviceOrderModel.setDefeitoRelatado(updateServiceOrderDTO.getDefeitoRelatado());
+        serviceOrderModel.setAnaliseTecnico(updateServiceOrderDTO.getAnaliseTecnico());
+        serviceOrderModel.setDiagnostico(updateServiceOrderDTO.getDiagnostico());
+        serviceOrderModel.setValor(updateServiceOrderDTO.getValor());
+        serviceOrderModel.setCustoReparo(updateServiceOrderDTO.getCustoReparo());
     }
 
 }

@@ -10,10 +10,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
+import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.services.ServiceOrderService;
 
 import jakarta.validation.Valid;
@@ -51,6 +53,14 @@ public class ServiceOrderController {
         List<ServiceOrderDTO> serviceOrders = serviceOrderService.findAll();
 
         return ResponseEntity.ok(serviceOrders);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ServiceOrderDTO> update(@PathVariable Long id,
+            @Valid @RequestBody UpdateServiceOrderDTO updateServiceOrderDTO) {
+        ServiceOrderDTO updatedServiceOrder = serviceOrderService.update(id, updateServiceOrderDTO);
+
+        return ResponseEntity.ok(updatedServiceOrder);
     }
 
 }
