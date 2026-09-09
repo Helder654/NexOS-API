@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -128,6 +129,27 @@ class ServiceOrderControllerIntegrationTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
+    }
+
+    @Test
+    void shouldReturnEmptyServiceOrderList() throws Exception {
+        mockMvc.perform(get("/service-orders"))
+                .andExpect(status().isOk())
+                .andExpect(content().json("[]"));
+    }
+
+    @Test
+    void shouldReturnAllServiceOrders() throws Exception {
+        ClientModel firstClient = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ClientModel secondClient = clientRepository.save(new ClientModel(null, "Bruno Lima", "(11) 98888-8888",
+                "bruno.lima@example.com"));
+        saveServiceOrder(firstClient);
+        saveServiceOrder(secondClient);
+
+        mockMvc.perform(get("/service-orders"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2));
     }
 
     private ServiceOrderModel saveServiceOrder(ClientModel clientModel) {

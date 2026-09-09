@@ -1,6 +1,7 @@
 package com.example.nexos.controllers;
 
 import java.net.URI;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -43,6 +44,13 @@ public class ServiceOrderController {
         ServiceOrderDTO serviceOrderDTO = serviceOrderService.findById(id);
 
         return ResponseEntity.ok(serviceOrderDTO);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ServiceOrderDTO>> findAll() {
+        List<ServiceOrderDTO> serviceOrders = serviceOrderService.findAll();
+
+        return ResponseEntity.ok(serviceOrders);
     }
 
 }

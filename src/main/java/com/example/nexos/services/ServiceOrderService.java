@@ -1,6 +1,7 @@
 package com.example.nexos.services;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import org.springframework.stereotype.Service;
 
@@ -44,6 +45,13 @@ public class ServiceOrderService {
 
     public ServiceOrderDTO findById(Long id) {
         return serviceOrderMapper.map(findServiceOrderModelById(id));
+    }
+
+    public List<ServiceOrderDTO> findAll() {
+        return serviceOrderRepository.findAll()
+                .stream()
+                .map(serviceOrderMapper::map)
+                .toList();
     }
 
     private ServiceOrderModel findServiceOrderModelById(Long id) {
