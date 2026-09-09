@@ -1,5 +1,9 @@
 package com.example.nexos.controllers;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -15,6 +19,8 @@ import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
 import com.example.nexos.models.ClientModel;
+import com.example.nexos.models.ServiceOrderModel;
+import com.example.nexos.models.ServiceOrderStatus;
 import com.example.nexos.repositories.ClientRepository;
 import com.example.nexos.repositories.ServiceOrderRepository;
 
@@ -99,6 +105,42 @@ class ServiceOrderControllerIntegrationTests {
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.detail").value("Cliente com id 999 não foi encontrado"));
+    }
+
+    @Test
+    void shouldReturnServiceOrderById() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(get("/service-orders/{id}", serviceOrderModel.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(serviceOrderModel.getId()))
+                .andExpect(jsonPath("$.clienteId").value(clientModel.getId()))
+                .andExpect(jsonPath("$.console").value("PlayStation 5"))
+                .andExpect(jsonPath("$.defeitoRelatado").value("O console não liga"))
+                .andExpect(jsonPath("$.status").value("ABERTA"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenServiceOrderDoesNotExist() throws Exception {
+        mockMvc.perform(get("/service-orders/{id}", 999L))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
+    }
+
+    private ServiceOrderModel saveServiceOrder(ClientModel clientModel) {
+        ServiceOrderModel serviceOrderModel = new ServiceOrderModel();
+        serviceOrderModel.setCliente(clientModel);
+        serviceOrderModel.setConsole("PlayStation 5");
+        serviceOrderModel.setDefeitoRelatado("O console não liga");
+        serviceOrderModel.setDataAbertura(LocalDateTime.now());
+        serviceOrderModel.setValor(new BigDecimal("350.00"));
+        serviceOrderModel.setCustoReparo(new BigDecimal("180.00"));
+        serviceOrderModel.setStatus(ServiceOrderStatus.ABERTA);
+
+        return serviceOrderRepository.save(serviceOrderModel);
     }
 
 }

@@ -42,4 +42,14 @@ public class ServiceOrderService {
         return serviceOrderMapper.map(savedServiceOrder);
     }
 
+    public ServiceOrderDTO findById(Long id) {
+        return serviceOrderMapper.map(findServiceOrderModelById(id));
+    }
+
+    private ServiceOrderModel findServiceOrderModelById(Long id) {
+        return serviceOrderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Ordem de serviço com id " + id + " não foi encontrada"));
+    }
+
 }
