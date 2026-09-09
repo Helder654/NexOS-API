@@ -16,4 +16,12 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(InvalidServiceOrderStatusException.class)
+    public ProblemDetail handleInvalidServiceOrderStatus(InvalidServiceOrderStatusException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("Transição de status inválida");
+
+        return problemDetail;
+    }
+
 }

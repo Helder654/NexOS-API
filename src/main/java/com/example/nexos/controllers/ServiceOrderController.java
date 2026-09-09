@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,7 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
+import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.services.ServiceOrderService;
 
 import jakarta.validation.Valid;
@@ -59,6 +61,14 @@ public class ServiceOrderController {
     public ResponseEntity<ServiceOrderDTO> update(@PathVariable Long id,
             @Valid @RequestBody UpdateServiceOrderDTO updateServiceOrderDTO) {
         ServiceOrderDTO updatedServiceOrder = serviceOrderService.update(id, updateServiceOrderDTO);
+
+        return ResponseEntity.ok(updatedServiceOrder);
+    }
+
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<ServiceOrderDTO> updateStatus(@PathVariable Long id,
+            @Valid @RequestBody UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO) {
+        ServiceOrderDTO updatedServiceOrder = serviceOrderService.updateStatus(id, updateServiceOrderStatusDTO);
 
         return ResponseEntity.ok(updatedServiceOrder);
     }

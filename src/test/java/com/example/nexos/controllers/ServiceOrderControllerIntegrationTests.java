@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -210,6 +211,73 @@ class ServiceOrderControllerIntegrationTests {
                         {
                           "console": "Xbox Series X",
                           "defeitoRelatado": "Desliga durante o jogo"
+                        }
+                        """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
+    }
+
+    @Test
+    void shouldUpdateServiceOrderStatus() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "EM_ANALISE"
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(serviceOrderModel.getId()))
+                .andExpect(jsonPath("$.status").value("EM_ANALISE"));
+    }
+
+    @Test
+    void shouldRejectInvalidServiceOrderStatusTransition() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "FINALIZADA"
+                        }
+                        """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.title").value("Transição de status inválida"))
+                .andExpect(jsonPath("$.detail").value("Não é possível alterar o status de ABERTA para FINALIZADA"));
+    }
+
+    @Test
+    void shouldRejectServiceOrderStatusWithoutValue() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": null
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingStatusOfNonexistentServiceOrder() throws Exception {
+        mockMvc.perform(patch("/service-orders/{id}/status", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "EM_ANALISE"
                         }
                         """))
                 .andExpect(status().isNotFound())

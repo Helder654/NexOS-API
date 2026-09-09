@@ -8,6 +8,8 @@ import org.springframework.stereotype.Service;
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
+import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
+import com.example.nexos.exceptions.InvalidServiceOrderStatusException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ServiceOrderMapper;
 import com.example.nexos.models.ClientModel;
@@ -59,6 +61,21 @@ public class ServiceOrderService {
         ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
         serviceOrderMapper.updateModel(updateServiceOrderDTO, serviceOrderModel);
 
+        ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
+
+        return serviceOrderMapper.map(updatedServiceOrder);
+    }
+
+    public ServiceOrderDTO updateStatus(Long id, UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO) {
+        ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+        ServiceOrderStatus newStatus = updateServiceOrderStatusDTO.getStatus();
+
+        if (!serviceOrderModel.getStatus().canTransitionTo(newStatus)) {
+            throw new InvalidServiceOrderStatusException(
+                    "Não é possível alterar o status de " + serviceOrderModel.getStatus() + " para " + newStatus);
+        }
+
+        serviceOrderModel.setStatus(newStatus);
         ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
 
         return serviceOrderMapper.map(updatedServiceOrder);
