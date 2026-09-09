@@ -4,6 +4,7 @@ import java.util.List;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -109,6 +110,57 @@ class ClientControllerIntegrationTests {
         mockMvc.perform(get("/clients"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    void shouldUpdateClient() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+
+        mockMvc.perform(put("/clients/{id}", clientModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "nome": "Ana Silva",
+                          "telefone": "(11) 98888-8888",
+                          "email": "ana.silva@example.com"
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(clientModel.getId()))
+                .andExpect(jsonPath("$.nome").value("Ana Silva"))
+                .andExpect(jsonPath("$.telefone").value("(11) 98888-8888"))
+                .andExpect(jsonPath("$.email").value("ana.silva@example.com"));
+    }
+
+    @Test
+    void shouldRejectInvalidClientUpdate() throws Exception {
+        mockMvc.perform(put("/clients/{id}", 1L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "nome": "",
+                          "telefone": "",
+                          "email": "email-invalido"
+                        }
+                        """))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenUpdatingNonexistentClient() throws Exception {
+        mockMvc.perform(put("/clients/{id}", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "nome": "Ana Silva",
+                          "telefone": "(11) 98888-8888",
+                          "email": "ana.silva@example.com"
+                        }
+                        """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.detail").value("Cliente com id 999 não foi encontrado"));
     }
 
 }

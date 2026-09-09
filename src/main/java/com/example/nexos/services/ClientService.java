@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import com.example.nexos.dtos.ClientDTO;
 import com.example.nexos.dtos.CreateClientDTO;
+import com.example.nexos.dtos.UpdateClientDTO;
 import com.example.nexos.exceptions.ResourceNotFoundException;
 import com.example.nexos.mappers.ClientMapper;
 import com.example.nexos.models.ClientModel;
@@ -30,10 +31,7 @@ public class ClientService {
     }
 
     public ClientDTO findById(Long id) {
-        ClientModel clientModel = clientRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Cliente com id " + id + " não foi encontrado"));
-
-        return clientMapper.map(clientModel);
+        return clientMapper.map(findClientModelById(id));
     }
 
     public List<ClientDTO> findAll() {
@@ -41,6 +39,19 @@ public class ClientService {
                 .stream()
                 .map(clientMapper::map)
                 .toList();
+    }
+
+    public ClientDTO update(Long id, UpdateClientDTO updateClientDTO) {
+        ClientModel clientModel = findClientModelById(id);
+        clientMapper.updateModel(updateClientDTO, clientModel);
+        ClientModel updatedClient = clientRepository.save(clientModel);
+
+        return clientMapper.map(updatedClient);
+    }
+
+    private ClientModel findClientModelById(Long id) {
+        return clientRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Cliente com id " + id + " não foi encontrado"));
     }
 
 }

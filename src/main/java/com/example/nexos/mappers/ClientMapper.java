@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.nexos.dtos.ClientDTO;
 import com.example.nexos.dtos.CreateClientDTO;
+import com.example.nexos.dtos.UpdateClientDTO;
 import com.example.nexos.models.ClientModel;
 
 @Component
@@ -28,6 +29,12 @@ public class ClientMapper {
         clientDTO.setEmail(clientModel.getEmail());
 
         return clientDTO;
+    }
+
+    public void updateModel(UpdateClientDTO updateClientDTO, ClientModel clientModel) {
+        clientModel.setNome(updateClientDTO.getNome());
+        clientModel.setTelefone(updateClientDTO.getTelefone());
+        clientModel.setEmail(updateClientDTO.getEmail());
     }
 
 }
