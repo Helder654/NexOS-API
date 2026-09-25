@@ -8,6 +8,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -77,8 +78,8 @@ public class ServiceOrderController {
     @PutMapping("/{id}")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECNICO')")
     public ResponseEntity<ServiceOrderDTO> update(@PathVariable Long id,
-            @Valid @RequestBody UpdateServiceOrderDTO updateServiceOrderDTO) {
-        ServiceOrderDTO updatedServiceOrder = serviceOrderService.update(id, updateServiceOrderDTO);
+            @Valid @RequestBody UpdateServiceOrderDTO updateServiceOrderDTO, Authentication authentication) {
+        ServiceOrderDTO updatedServiceOrder = serviceOrderService.update(id, updateServiceOrderDTO, authentication);
 
         return ResponseEntity.ok(updatedServiceOrder);
     }
@@ -95,8 +96,10 @@ public class ServiceOrderController {
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAnyRole('ADMIN', 'TECNICO')")
     public ResponseEntity<ServiceOrderDTO> updateStatus(@PathVariable Long id,
-            @Valid @RequestBody UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO) {
-        ServiceOrderDTO updatedServiceOrder = serviceOrderService.updateStatus(id, updateServiceOrderStatusDTO);
+            @Valid @RequestBody UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO,
+            Authentication authentication) {
+        ServiceOrderDTO updatedServiceOrder = serviceOrderService.updateStatus(id, updateServiceOrderStatusDTO,
+                authentication);
 
         return ResponseEntity.ok(updatedServiceOrder);
     }

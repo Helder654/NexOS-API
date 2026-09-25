@@ -144,7 +144,7 @@ class AuthenticationControllerIntegrationTests {
 
     @Test
     void shouldAllowTechnicianToUpdateServiceOrderStatus() throws Exception {
-        saveUser("Técnico Teste", "tecnico@example.com", UserRole.TECNICO);
+        UserModel technician = saveUser("Técnico Teste", "tecnico@example.com", UserRole.TECNICO);
         ClientModel clientModel = clientRepository.save(new ClientModel(null, "Cliente Teste", "(11) 99999-9999",
                 "cliente@example.com"));
         ServiceOrderModel serviceOrderModel = new ServiceOrderModel();
@@ -155,6 +155,7 @@ class AuthenticationControllerIntegrationTests {
         serviceOrderModel.setValor(new BigDecimal("350.00"));
         serviceOrderModel.setCustoReparo(new BigDecimal("180.00"));
         serviceOrderModel.setStatus(ServiceOrderStatus.ABERTA);
+        serviceOrderModel.setTecnico(technician);
         serviceOrderModel = serviceOrderRepository.save(serviceOrderModel);
         String token = loginAndGetToken("tecnico@example.com", PASSWORD);
 
@@ -170,14 +171,14 @@ class AuthenticationControllerIntegrationTests {
                 .andExpect(jsonPath("$.status").value("EM_ANALISE"));
     }
 
-    private void saveUser(String name, String email, UserRole userRole) {
+    private UserModel saveUser(String name, String email, UserRole userRole) {
         UserModel userModel = new UserModel();
         userModel.setNome(name);
         userModel.setEmail(email);
         userModel.setSenha(passwordEncoder.encode(PASSWORD));
         userModel.setRole(userRole);
 
-        userRepository.save(userModel);
+        return userRepository.save(userModel);
     }
 
     private String loginAndGetToken(String email, String password) throws Exception {

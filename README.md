@@ -103,6 +103,8 @@ Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definid
 
 A ordem pode iniciar sem técnico responsável. Um `ADMIN` ou `ATENDENTE` atribui um usuário de papel `TECNICO` por meio do endpoint específico. A resposta da ordem inclui, quando houver atribuição, um resumo seguro do técnico com identificador, nome e e-mail. Ordens `CANCELADA` ou `FINALIZADA` não aceitam novas atribuições.
 
+Um técnico pode consultar clientes e ordens, mas só pode alterar dados técnicos ou status de uma ordem atribuída ao próprio e-mail. A regra é verificada na camada de serviço, de modo que não dependa exclusivamente da proteção do endpoint. O `ADMIN` permanece autorizado a alterar qualquer ordem.
+
 O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
 
 Uma ordem pode ser excluída somente enquanto estiver `ABERTA` ou depois de `CANCELADA`. Ordens em análise, reparo ou já finalizadas preservam seu histórico e retornam `409 Conflict` caso a exclusão seja solicitada.
@@ -151,6 +153,7 @@ Os DTOs validam campos obrigatórios, tamanho de textos e valores monetários n�
 | E-mail de usuário já cadastrado | `409 Conflict` |
 | Exclusão ou alteração do último administrador | `409 Conflict` |
 | Técnico inválido ou atribuição em ordem encerrada | `409 Conflict` |
+| Técnico tenta alterar ordem de outro técnico ou sem responsável | `403 Forbidden` |
 
 Os erros usam o formato `ProblemDetail` do Spring, deixando a resposta consistente para quem consumir a API.
 
@@ -228,7 +231,7 @@ Authorization: Bearer <token>
 | --- | --- |
 | `ADMIN` | Acesso total, incluindo exclusões e atribuição de técnicos |
 | `ATENDENTE` | Gerencia clientes, consulta informações, abre ordens e atribui técnicos |
-| `TECNICO` | Consulta clientes e ordens; atualiza dados técnicos e status |
+| `TECNICO` | Consulta clientes e ordens; altera dados técnicos e status apenas das ordens atribuídas a ele |
 
 As senhas são armazenadas com hash BCrypt e jamais aparecem nas respostas da API. E-mails de usuários são normalizados para letras minúsculas. O JWT tem validade configurável, atualmente de duas horas.
 
@@ -273,7 +276,7 @@ O projeto possui testes de integração para os endpoints de clientes, usuários
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 61 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos e transições de status inválidas.
+Atualmente, a suíte possui 64 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos, isolamento de ordens por técnico e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -291,12 +294,13 @@ Atualmente, a suíte possui 61 testes automatizados cobrindo cenários de sucess
 12. **Autenticação e autorização** — Login JWT, senhas protegidas com BCrypt e permissões definidas por papel de usuário.
 13. **Gestão administrativa de usuários** — Cadastro, consulta, atualização, redefinição de senha e remoção segura de usuários, incluindo técnicos.
 14. **Técnicos nas ordens de serviço** — Vínculo opcional, atribuição por endpoint próprio, validação do papel do usuário e proteção contra exclusão de técnico em uso.
+15. **Isolamento de alterações técnicas** — Técnicos só alteram dados e status das ordens atribuídas a eles; administradores mantêm acesso total.
 
 ## Próximas evoluções
 
 - acompanhamento de custos, faturamento e lucro de ordens finalizadas.
 - renovação e revogação de tokens;
-- restrição de acesso de técnicos às ordens que lhes forem atribuídas.
+- desativação de usuários sem apagar seu histórico.
 
 ## Autor
 

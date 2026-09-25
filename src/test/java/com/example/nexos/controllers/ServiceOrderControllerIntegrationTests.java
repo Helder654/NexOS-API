@@ -486,6 +486,72 @@ class ServiceOrderControllerIntegrationTests {
     }
 
     @Test
+    @WithMockUser(username = "marina@example.com", roles = "TECNICO")
+    void shouldAllowAssignedTechnicianToUpdateServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setTecnico(technician);
+        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(put("/service-orders/{id}", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "console": "Xbox Series X",
+                          "defeitoRelatado": "Desliga durante o jogo",
+                          "analiseTecnico": "Sistema de refrigeração revisado",
+                          "diagnostico": "Pasta térmica ressecada",
+                          "valor": 420.00,
+                          "custoReparo": 210.00
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.console").value("Xbox Series X"));
+    }
+
+    @Test
+    @WithMockUser(username = "outro.tecnico@example.com", roles = "TECNICO")
+    void shouldRejectUpdateByTechnicianNotAssignedToServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        UserModel assignedTechnician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setTecnico(assignedTechnician);
+        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(put("/service-orders/{id}", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "console": "Xbox Series X",
+                          "defeitoRelatado": "Desliga durante o jogo"
+                        }
+                        """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Acesso à ordem não permitido"));
+    }
+
+    @Test
+    @WithMockUser(username = "outro.tecnico@example.com", roles = "TECNICO")
+    void shouldRejectStatusChangeByTechnicianWithoutAssignment() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "EM_ANALISE"
+                        }
+                        """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.title").value("Acesso à ordem não permitido"));
+    }
+
+    @Test
     void shouldReturnNotFoundWhenUpdatingStatusOfNonexistentServiceOrder() throws Exception {
         mockMvc.perform(patch("/service-orders/{id}/status", 999L)
                 .contentType(MediaType.APPLICATION_JSON)

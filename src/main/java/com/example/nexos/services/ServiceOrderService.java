@@ -6,6 +6,7 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
@@ -21,6 +22,7 @@ import com.example.nexos.exceptions.InvalidServiceOrderTechnicianException;
 import com.example.nexos.exceptions.InvalidServiceOrderDeletionException;
 import com.example.nexos.exceptions.InvalidServiceOrderFilterException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
+import com.example.nexos.exceptions.ServiceOrderAccessDeniedException;
 import com.example.nexos.mappers.ServiceOrderMapper;
 import com.example.nexos.mappers.ServiceOrderStatusHistoryMapper;
 import com.example.nexos.models.ClientModel;
@@ -83,8 +85,9 @@ public class ServiceOrderService {
         return PageResponseDTO.from(serviceOrderPage);
     }
 
-    public ServiceOrderDTO update(Long id, UpdateServiceOrderDTO updateServiceOrderDTO) {
+    public ServiceOrderDTO update(Long id, UpdateServiceOrderDTO updateServiceOrderDTO, Authentication authentication) {
         ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+        validateTechnicianAccess(serviceOrderModel, authentication);
         serviceOrderMapper.updateModel(updateServiceOrderDTO, serviceOrderModel);
 
         ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
@@ -117,8 +120,10 @@ public class ServiceOrderService {
     }
 
     @Transactional
-    public ServiceOrderDTO updateStatus(Long id, UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO) {
+    public ServiceOrderDTO updateStatus(Long id, UpdateServiceOrderStatusDTO updateServiceOrderStatusDTO,
+            Authentication authentication) {
         ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+        validateTechnicianAccess(serviceOrderModel, authentication);
         ServiceOrderStatus previousStatus = serviceOrderModel.getStatus();
         ServiceOrderStatus newStatus = updateServiceOrderStatusDTO.getStatus();
 
@@ -169,6 +174,23 @@ public class ServiceOrderService {
                 && serviceOrderFilterDTO.getDataAberturaInicial().isAfter(serviceOrderFilterDTO.getDataAberturaFinal())) {
             throw new InvalidServiceOrderFilterException(
                     "A data inicial não pode ser posterior à data final");
+        }
+    }
+
+    private void validateTechnicianAccess(ServiceOrderModel serviceOrderModel, Authentication authentication) {
+        boolean isAdministrator = authentication.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("ROLE_ADMIN"));
+
+        if (isAdministrator) {
+            return;
+        }
+
+        boolean isAssignedTechnician = serviceOrderModel.getTecnico() != null
+                && serviceOrderModel.getTecnico().getEmail().equalsIgnoreCase(authentication.getName());
+
+        if (!isAssignedTechnician) {
+            throw new ServiceOrderAccessDeniedException(
+                    "O técnico só pode alterar ordens de serviço atribuídas a ele");
         }
     }
 

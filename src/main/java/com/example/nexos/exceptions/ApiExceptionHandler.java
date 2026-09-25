@@ -48,6 +48,14 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(ServiceOrderAccessDeniedException.class)
+    public ProblemDetail handleServiceOrderAccessDenied(ServiceOrderAccessDeniedException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.FORBIDDEN, exception.getMessage());
+        problemDetail.setTitle("Acesso à ordem não permitido");
+
+        return problemDetail;
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
