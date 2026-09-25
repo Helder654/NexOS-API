@@ -75,6 +75,7 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | `GET` | `/service-orders` | Lista ordens de serviço de forma paginada |
 | `GET` | `/service-orders/{id}` | Busca uma ordem por ID |
 | `PUT` | `/service-orders/{id}` | Atualiza dados técnicos e financeiros da ordem |
+| `PATCH` | `/service-orders/{id}/technician` | Atribui ou altera o técnico responsável |
 | `PATCH` | `/service-orders/{id}/status` | Atualiza somente o status da ordem |
 | `GET` | `/service-orders/{id}/status-history` | Consulta o histórico de mudanças de status |
 | `DELETE` | `/service-orders/{id}` | Exclui uma ordem em situação permitida |
@@ -99,6 +100,8 @@ Todas as rotas abaixo exigem um token de `ADMIN`.
 | `DELETE` | `/users/{id}` | Remove um usuário quando permitido |
 
 Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
+
+A ordem pode iniciar sem técnico responsável. Um `ADMIN` ou `ATENDENTE` atribui um usuário de papel `TECNICO` por meio do endpoint específico. A resposta da ordem inclui, quando houver atribuição, um resumo seguro do técnico com identificador, nome e e-mail. Ordens `CANCELADA` ou `FINALIZADA` não aceitam novas atribuições.
 
 O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
 
@@ -147,6 +150,7 @@ Os DTOs validam campos obrigatórios, tamanho de textos e valores monetários n�
 | Transição de status inválida | `409 Conflict` |
 | E-mail de usuário já cadastrado | `409 Conflict` |
 | Exclusão ou alteração do último administrador | `409 Conflict` |
+| Técnico inválido ou atribuição em ordem encerrada | `409 Conflict` |
 
 Os erros usam o formato `ProblemDetail` do Spring, deixando a resposta consistente para quem consumir a API.
 
@@ -222,17 +226,31 @@ Authorization: Bearer <token>
 
 | Papel | Permissões |
 | --- | --- |
-| `ADMIN` | Acesso total, incluindo exclusões |
-| `ATENDENTE` | Gerencia clientes, consulta informações e abre ordens |
+| `ADMIN` | Acesso total, incluindo exclusões e atribuição de técnicos |
+| `ATENDENTE` | Gerencia clientes, consulta informações, abre ordens e atribui técnicos |
 | `TECNICO` | Consulta clientes e ordens; atualiza dados técnicos e status |
 
 As senhas são armazenadas com hash BCrypt e jamais aparecem nas respostas da API. E-mails de usuários são normalizados para letras minúsculas. O JWT tem validade configurável, atualmente de duas horas.
 
-O `ADMIN` cadastra atendentes e técnicos em `POST /users`, informando `nome`, `email`, `senha` e `role`. A alteração de senha possui endpoint próprio para não misturá-la com atualizações cadastrais. Para impedir o bloqueio administrativo da aplicação, não é possível excluir a própria conta nem remover ou rebaixar o último `ADMIN`.
+O `ADMIN` cadastra atendentes e técnicos em `POST /users`, informando `nome`, `email`, `senha` e `role`. A alteração de senha possui endpoint próprio para não misturá-la com atualizações cadastrais. Para impedir o bloqueio administrativo da aplicação, não é possível excluir a própria conta nem remover ou rebaixar o último `ADMIN`. Um técnico também não pode ser excluído enquanto possuir ordens de serviço atribuídas.
+
+Exemplo de atribuição de técnico:
+
+```http
+PATCH /service-orders/42/technician
+Authorization: Bearer <token-de-admin-ou-atendente>
+Content-Type: application/json
+```
+
+```json
+{
+  "tecnicoId": 7
+}
+```
 
 ## Migrações de banco de dados
 
-O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, a `V2__create_service_order_status_history.sql` adiciona o histórico de status e a `V3__create_users.sql` adiciona usuários e seus papéis. As migrações também criam índices usados nas consultas por cliente, status e data de abertura.
+O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, a `V2__create_service_order_status_history.sql` adiciona o histórico de status, a `V3__create_users.sql` adiciona usuários e seus papéis, e a `V4__add_technician_to_service_orders.sql` cria o vínculo opcional com o técnico responsável. As migrações também criam índices usados nas consultas por cliente, status, data de abertura e técnico.
 
 O Hibernate utiliza `ddl-auto=validate`: ele confere se as entidades correspondem ao schema, mas não cria nem altera tabelas. Toda evolução estrutural deve ser adicionada como uma nova migração em `src/main/resources/db/migration`.
 
@@ -255,7 +273,7 @@ O projeto possui testes de integração para os endpoints de clientes, usuários
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 53 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários e transições de status inválidas.
+Atualmente, a suíte possui 61 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -272,12 +290,13 @@ Atualmente, a suíte possui 53 testes automatizados cobrindo cenários de sucess
 11. **Histórico de status** — Cada transição válida é auditada com os estados anterior e novo, além do instante da alteração.
 12. **Autenticação e autorização** — Login JWT, senhas protegidas com BCrypt e permissões definidas por papel de usuário.
 13. **Gestão administrativa de usuários** — Cadastro, consulta, atualização, redefinição de senha e remoção segura de usuários, incluindo técnicos.
+14. **Técnicos nas ordens de serviço** — Vínculo opcional, atribuição por endpoint próprio, validação do papel do usuário e proteção contra exclusão de técnico em uso.
 
 ## Próximas evoluções
 
-- cadastro de técnicos e acompanhamento de custos/lucro.
+- acompanhamento de custos, faturamento e lucro de ordens finalizadas.
 - renovação e revogação de tokens;
-- vínculo de técnicos às ordens de serviço e restrição de acesso às ordens atribuídas.
+- restrição de acesso de técnicos às ordens que lhes forem atribuídas.
 
 ## Autor
 

@@ -19,6 +19,7 @@ import com.example.nexos.mappers.UserMapper;
 import com.example.nexos.models.UserModel;
 import com.example.nexos.models.UserRole;
 import com.example.nexos.repositories.UserRepository;
+import com.example.nexos.repositories.ServiceOrderRepository;
 
 @Service
 public class UserService {
@@ -26,11 +27,14 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
     private final PasswordEncoder passwordEncoder;
+    private final ServiceOrderRepository serviceOrderRepository;
 
-    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder,
+            ServiceOrderRepository serviceOrderRepository) {
         this.userRepository = userRepository;
         this.userMapper = userMapper;
         this.passwordEncoder = passwordEncoder;
+        this.serviceOrderRepository = serviceOrderRepository;
     }
 
     public UserDTO create(CreateUserDTO createUserDTO) {
@@ -83,6 +87,11 @@ public class UserService {
 
         if (userModel.getEmail().equals(normalizeEmail(currentUserEmail))) {
             throw new InvalidUserOperationException("Um usuário não pode excluir a própria conta");
+        }
+
+        if (serviceOrderRepository.existsByTecnicoId(id)) {
+            throw new InvalidUserOperationException(
+                    "O técnico não pode ser excluído enquanto possuir ordens de serviço atribuídas");
         }
 
         validateLastAdminRoleChange(userModel, null);

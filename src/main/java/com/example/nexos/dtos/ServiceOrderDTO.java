@@ -18,6 +18,7 @@ public class ServiceOrderDTO {
 
     private Long id;
     private Long clienteId;
+    private TechnicianSummaryDTO tecnico;
     private String console;
     private String defeitoRelatado;
     private String analiseTecnico;

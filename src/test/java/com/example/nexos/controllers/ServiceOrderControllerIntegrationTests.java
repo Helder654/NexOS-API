@@ -13,6 +13,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -27,9 +28,12 @@ import org.springframework.web.context.WebApplicationContext;
 import com.example.nexos.models.ClientModel;
 import com.example.nexos.models.ServiceOrderModel;
 import com.example.nexos.models.ServiceOrderStatus;
+import com.example.nexos.models.UserModel;
+import com.example.nexos.models.UserRole;
 import com.example.nexos.repositories.ClientRepository;
 import com.example.nexos.repositories.ServiceOrderRepository;
 import com.example.nexos.repositories.ServiceOrderStatusHistoryRepository;
+import com.example.nexos.repositories.UserRepository;
 
 @SpringBootTest
 @WithMockUser(roles = "ADMIN")
@@ -47,14 +51,20 @@ class ServiceOrderControllerIntegrationTests {
     @Autowired
     private ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private MockMvc mockMvc;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
+        mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
+                .apply(springSecurity())
+                .build();
         serviceOrderStatusHistoryRepository.deleteAll();
         serviceOrderRepository.deleteAll();
         clientRepository.deleteAll();
+        userRepository.deleteAll();
     }
 
     @Test
@@ -347,6 +357,135 @@ class ServiceOrderControllerIntegrationTests {
     }
 
     @Test
+    void shouldAssignTechnicianToServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": %d
+                        }
+                        """.formatted(technician.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tecnico.id").value(technician.getId()))
+                .andExpect(jsonPath("$.tecnico.nome").value("Marina Técnica"))
+                .andExpect(jsonPath("$.tecnico.email").value("marina@example.com"));
+
+        mockMvc.perform(get("/service-orders/{id}", serviceOrderModel.getId()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.tecnico.id").value(technician.getId()));
+    }
+
+    @Test
+    @WithMockUser(roles = "ATENDENTE")
+    void shouldAllowAttendantToAssignTechnicianToServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": %d
+                        }
+                        """.formatted(technician.getId())))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(roles = "TECNICO")
+    void shouldNotAllowTechnicianToAssignTechnicianToServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": %d
+                        }
+                        """.formatted(technician.getId())))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldRejectTechnicianAssignmentWhenUserDoesNotHaveTechnicianRole() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        UserModel attendant = saveUser("Carlos Atendente", "carlos@example.com", UserRole.ATENDENTE);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": %d
+                        }
+                        """.formatted(attendant.getId())))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Atribuição de técnico não permitida"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenAssigningNonexistentTechnician() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": 999
+                        }
+                        """))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Técnico com id 999 não foi encontrado"));
+    }
+
+    @Test
+    void shouldReturnNotFoundWhenAssigningTechnicianToNonexistentServiceOrder() throws Exception {
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", 999L)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": %d
+                        }
+                        """.formatted(technician.getId())))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value("Ordem de serviço com id 999 não foi encontrada"));
+    }
+
+    @Test
+    void shouldRejectTechnicianAssignmentToClosedServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setStatus(ServiceOrderStatus.CANCELADA);
+        serviceOrderRepository.save(serviceOrderModel);
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", UserRole.TECNICO);
+
+        mockMvc.perform(patch("/service-orders/{id}/technician", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "tecnicoId": %d
+                        }
+                        """.formatted(technician.getId())))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
     void shouldReturnNotFoundWhenUpdatingStatusOfNonexistentServiceOrder() throws Exception {
         mockMvc.perform(patch("/service-orders/{id}/status", 999L)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -469,6 +608,16 @@ class ServiceOrderControllerIntegrationTests {
         serviceOrderModel.setStatus(ServiceOrderStatus.ABERTA);
 
         return serviceOrderRepository.save(serviceOrderModel);
+    }
+
+    private UserModel saveUser(String name, String email, UserRole userRole) {
+        UserModel userModel = new UserModel();
+        userModel.setNome(name);
+        userModel.setEmail(email);
+        userModel.setSenha("senha-criptografada-de-teste");
+        userModel.setRole(userRole);
+
+        return userRepository.save(userModel);
     }
 
 }

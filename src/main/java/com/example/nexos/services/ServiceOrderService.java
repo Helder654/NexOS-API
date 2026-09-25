@@ -10,12 +10,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.PageResponseDTO;
+import com.example.nexos.dtos.AssignServiceOrderTechnicianDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderFilterDTO;
 import com.example.nexos.dtos.ServiceOrderStatusHistoryDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.exceptions.InvalidServiceOrderStatusException;
+import com.example.nexos.exceptions.InvalidServiceOrderTechnicianException;
 import com.example.nexos.exceptions.InvalidServiceOrderDeletionException;
 import com.example.nexos.exceptions.InvalidServiceOrderFilterException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
@@ -24,9 +26,12 @@ import com.example.nexos.mappers.ServiceOrderStatusHistoryMapper;
 import com.example.nexos.models.ClientModel;
 import com.example.nexos.models.ServiceOrderModel;
 import com.example.nexos.models.ServiceOrderStatus;
+import com.example.nexos.models.UserModel;
+import com.example.nexos.models.UserRole;
 import com.example.nexos.repositories.ClientRepository;
 import com.example.nexos.repositories.ServiceOrderRepository;
 import com.example.nexos.repositories.ServiceOrderStatusHistoryRepository;
+import com.example.nexos.repositories.UserRepository;
 import com.example.nexos.specifications.ServiceOrderSpecification;
 
 @Service
@@ -37,15 +42,17 @@ public class ServiceOrderService {
     private final ServiceOrderMapper serviceOrderMapper;
     private final ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository;
     private final ServiceOrderStatusHistoryMapper serviceOrderStatusHistoryMapper;
+    private final UserRepository userRepository;
 
     public ServiceOrderService(ServiceOrderRepository serviceOrderRepository, ClientRepository clientRepository,
             ServiceOrderMapper serviceOrderMapper, ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository,
-            ServiceOrderStatusHistoryMapper serviceOrderStatusHistoryMapper) {
+            ServiceOrderStatusHistoryMapper serviceOrderStatusHistoryMapper, UserRepository userRepository) {
         this.serviceOrderRepository = serviceOrderRepository;
         this.clientRepository = clientRepository;
         this.serviceOrderMapper = serviceOrderMapper;
         this.serviceOrderStatusHistoryRepository = serviceOrderStatusHistoryRepository;
         this.serviceOrderStatusHistoryMapper = serviceOrderStatusHistoryMapper;
+        this.userRepository = userRepository;
     }
 
     public ServiceOrderDTO create(CreateServiceOrderDTO createServiceOrderDTO) {
@@ -80,6 +87,30 @@ public class ServiceOrderService {
         ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
         serviceOrderMapper.updateModel(updateServiceOrderDTO, serviceOrderModel);
 
+        ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
+
+        return serviceOrderMapper.map(updatedServiceOrder);
+    }
+
+    public ServiceOrderDTO assignTechnician(Long id,
+            AssignServiceOrderTechnicianDTO assignServiceOrderTechnicianDTO) {
+        ServiceOrderModel serviceOrderModel = findServiceOrderModelById(id);
+
+        if (!serviceOrderModel.getStatus().canAssignTechnician()) {
+            throw new InvalidServiceOrderTechnicianException(
+                    "Não é possível atribuir um técnico a uma ordem com status " + serviceOrderModel.getStatus());
+        }
+
+        Long technicianId = assignServiceOrderTechnicianDTO.getTecnicoId();
+        UserModel technician = userRepository.findById(technicianId)
+                .orElseThrow(() -> new ResourceNotFoundException("Técnico com id " + technicianId + " não foi encontrado"));
+
+        if (technician.getRole() != UserRole.TECNICO) {
+            throw new InvalidServiceOrderTechnicianException(
+                    "O usuário com id " + technicianId + " não possui o papel TECNICO");
+        }
+
+        serviceOrderModel.setTecnico(technician);
         ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
 
         return serviceOrderMapper.map(updatedServiceOrder);

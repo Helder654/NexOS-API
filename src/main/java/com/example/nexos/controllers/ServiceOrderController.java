@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
+import com.example.nexos.dtos.AssignServiceOrderTechnicianDTO;
 import com.example.nexos.dtos.PageResponseDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderFilterDTO;
@@ -78,6 +79,15 @@ public class ServiceOrderController {
     public ResponseEntity<ServiceOrderDTO> update(@PathVariable Long id,
             @Valid @RequestBody UpdateServiceOrderDTO updateServiceOrderDTO) {
         ServiceOrderDTO updatedServiceOrder = serviceOrderService.update(id, updateServiceOrderDTO);
+
+        return ResponseEntity.ok(updatedServiceOrder);
+    }
+
+    @PatchMapping("/{id}/technician")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ATENDENTE')")
+    public ResponseEntity<ServiceOrderDTO> assignTechnician(@PathVariable Long id,
+            @Valid @RequestBody AssignServiceOrderTechnicianDTO assignServiceOrderTechnicianDTO) {
+        ServiceOrderDTO updatedServiceOrder = serviceOrderService.assignTechnician(id, assignServiceOrderTechnicianDTO);
 
         return ResponseEntity.ok(updatedServiceOrder);
     }

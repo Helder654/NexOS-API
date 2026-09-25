@@ -34,6 +34,10 @@ public class ServiceOrderModel {
     @JoinColumn(name = "id_cliente", nullable = false)
     private ClientModel cliente;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_tecnico")
+    private UserModel tecnico;
+
     @Column(name = "console", nullable = false, length = 100)
     private String console;
 

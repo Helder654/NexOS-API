@@ -40,6 +40,14 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(InvalidServiceOrderTechnicianException.class)
+    public ProblemDetail handleInvalidServiceOrderTechnician(InvalidServiceOrderTechnicianException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("Atribuição de técnico não permitida");
+
+        return problemDetail;
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());

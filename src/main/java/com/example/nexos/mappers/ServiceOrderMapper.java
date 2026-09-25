@@ -4,6 +4,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.nexos.dtos.CreateServiceOrderDTO;
 import com.example.nexos.dtos.ServiceOrderDTO;
+import com.example.nexos.dtos.TechnicianSummaryDTO;
 import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.models.ClientModel;
 import com.example.nexos.models.ServiceOrderModel;
@@ -30,6 +31,7 @@ public class ServiceOrderMapper {
 
         serviceOrderDTO.setId(serviceOrderModel.getId());
         serviceOrderDTO.setClienteId(serviceOrderModel.getCliente().getId());
+        serviceOrderDTO.setTecnico(mapTechnician(serviceOrderModel));
         serviceOrderDTO.setConsole(serviceOrderModel.getConsole());
         serviceOrderDTO.setDefeitoRelatado(serviceOrderModel.getDefeitoRelatado());
         serviceOrderDTO.setAnaliseTecnico(serviceOrderModel.getAnaliseTecnico());
@@ -49,6 +51,19 @@ public class ServiceOrderMapper {
         serviceOrderModel.setDiagnostico(updateServiceOrderDTO.getDiagnostico());
         serviceOrderModel.setValor(updateServiceOrderDTO.getValor());
         serviceOrderModel.setCustoReparo(updateServiceOrderDTO.getCustoReparo());
+    }
+
+    private TechnicianSummaryDTO mapTechnician(ServiceOrderModel serviceOrderModel) {
+        if (serviceOrderModel.getTecnico() == null) {
+            return null;
+        }
+
+        TechnicianSummaryDTO technicianSummaryDTO = new TechnicianSummaryDTO();
+        technicianSummaryDTO.setId(serviceOrderModel.getTecnico().getId());
+        technicianSummaryDTO.setNome(serviceOrderModel.getTecnico().getNome());
+        technicianSummaryDTO.setEmail(serviceOrderModel.getTecnico().getEmail());
+
+        return technicianSummaryDTO;
     }
 
 }

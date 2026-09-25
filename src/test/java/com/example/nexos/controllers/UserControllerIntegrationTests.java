@@ -1,5 +1,8 @@
 package com.example.nexos.controllers;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -13,6 +16,12 @@ import org.springframework.web.context.WebApplicationContext;
 
 import com.example.nexos.models.UserModel;
 import com.example.nexos.models.UserRole;
+import com.example.nexos.models.ClientModel;
+import com.example.nexos.models.ServiceOrderModel;
+import com.example.nexos.models.ServiceOrderStatus;
+import com.example.nexos.repositories.ClientRepository;
+import com.example.nexos.repositories.ServiceOrderRepository;
+import com.example.nexos.repositories.ServiceOrderStatusHistoryRepository;
 import com.example.nexos.repositories.UserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +48,15 @@ class UserControllerIntegrationTests {
     private UserRepository userRepository;
 
     @Autowired
+    private ClientRepository clientRepository;
+
+    @Autowired
+    private ServiceOrderRepository serviceOrderRepository;
+
+    @Autowired
+    private ServiceOrderStatusHistoryRepository serviceOrderStatusHistoryRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -50,12 +68,12 @@ class UserControllerIntegrationTests {
         mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)
                 .apply(springSecurity())
                 .build();
-        userRepository.deleteAll();
+        clearDatabase();
     }
 
     @AfterEach
     void tearDown() {
-        userRepository.deleteAll();
+        clearDatabase();
     }
 
     @Test
@@ -239,6 +257,28 @@ class UserControllerIntegrationTests {
         org.assertj.core.api.Assertions.assertThat(userRepository.findById(technician.getId())).isEmpty();
     }
 
+    @Test
+    void shouldNotAllowDeletingTechnicianWithAssignedServiceOrders() throws Exception {
+        String adminToken = createAdministratorToken();
+        UserModel technician = saveUser("Marina Técnica", "marina@example.com", USER_PASSWORD, UserRole.TECNICO);
+        ClientModel client = clientRepository.save(new ClientModel(null, "Cliente Teste", "(11) 99999-9999",
+                "cliente@example.com"));
+        ServiceOrderModel serviceOrder = new ServiceOrderModel();
+        serviceOrder.setCliente(client);
+        serviceOrder.setTecnico(technician);
+        serviceOrder.setConsole("PlayStation 5");
+        serviceOrder.setDefeitoRelatado("Console não liga");
+        serviceOrder.setDataAbertura(LocalDateTime.now());
+        serviceOrder.setValor(new BigDecimal("350.00"));
+        serviceOrder.setCustoReparo(new BigDecimal("180.00"));
+        serviceOrder.setStatus(ServiceOrderStatus.ABERTA);
+        serviceOrderRepository.save(serviceOrder);
+
+        mockMvc.perform(delete("/users/{id}", technician.getId())
+                .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isConflict());
+    }
+
     private String createAdministratorToken() throws Exception {
         saveUser("Administrador", "admin@example.com", ADMIN_PASSWORD, UserRole.ADMIN);
 
@@ -271,5 +311,12 @@ class UserControllerIntegrationTests {
         JsonNode response = objectMapper.readTree(responseBody);
 
         return response.get("token").asText();
+    }
+
+    private void clearDatabase() {
+        serviceOrderStatusHistoryRepository.deleteAll();
+        serviceOrderRepository.deleteAll();
+        clientRepository.deleteAll();
+        userRepository.deleteAll();
     }
 }

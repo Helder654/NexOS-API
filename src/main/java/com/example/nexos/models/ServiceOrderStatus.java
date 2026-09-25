@@ -21,4 +21,8 @@ public enum ServiceOrderStatus {
     public boolean canBeDeleted() {
         return this == ABERTA || this == CANCELADA;
     }
+
+    public boolean canAssignTechnician() {
+        return this != FINALIZADA && this != CANCELADA;
+    }
 }
