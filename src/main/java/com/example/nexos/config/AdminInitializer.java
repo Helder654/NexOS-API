@@ -1,5 +1,7 @@
 package com.example.nexos.config;
 
+import java.util.Locale;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -31,14 +33,16 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
+        String normalizedEmail = email.trim().toLowerCase(Locale.ROOT);
+
         if (!StringUtils.hasText(name) || !StringUtils.hasText(email) || !StringUtils.hasText(password)
-                || userRepository.existsByEmail(email)) {
+                || userRepository.existsByEmail(normalizedEmail)) {
             return;
         }
 
         UserModel admin = new UserModel();
-        admin.setNome(name);
-        admin.setEmail(email);
+        admin.setNome(name.trim());
+        admin.setEmail(normalizedEmail);
         admin.setSenha(passwordEncoder.encode(password));
         admin.setRole(UserRole.ADMIN);
 

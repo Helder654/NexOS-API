@@ -16,6 +16,12 @@ O NexOS centraliza informações importantes para uma assistência técnica:
 
 O backend foi pensado para ser consumido futuramente por uma aplicação web, mobile ou outro cliente HTTP.
 
+## Aprendizado com apoio de agentes de IA
+
+O NexOS também é um projeto de aprendizado sobre desenvolvimento assistido por IA. O autor trabalha em colaboração com agentes para discutir modelagem, investigar alternativas, revisar código, criar testes e documentar decisões.
+
+O escopo de cada etapa, as decisões de negócio e a aprovação das mudanças permanecem sob responsabilidade do autor. O histórico de commits, os testes automatizados e esta documentação tornam o processo de evolução verificável para quem analisar o projeto.
+
 ## Tecnologias
 
 - Java 21
@@ -79,6 +85,19 @@ Essa separação evita expor entidades JPA diretamente na API e mantém as regra
 | --- | --- | --- |
 | `POST` | `/auth/login` | Autentica um usuário e retorna um JWT |
 
+### Usuários
+
+Todas as rotas abaixo exigem um token de `ADMIN`.
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `POST` | `/users` | Cadastra um usuário, incluindo técnicos |
+| `GET` | `/users` | Lista usuários de forma paginada |
+| `GET` | `/users/{id}` | Busca um usuário por ID |
+| `PUT` | `/users/{id}` | Atualiza nome, e-mail e papel do usuário |
+| `PATCH` | `/users/{id}/password` | Redefine a senha de um usuário |
+| `DELETE` | `/users/{id}` | Remove um usuário quando permitido |
+
 Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
 
 O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
@@ -94,7 +113,7 @@ GET /clients?page=0&size=10&sort=nome,asc
 GET /service-orders?page=0&size=10&sort=dataAbertura,desc
 ```
 
-Sem parâmetros, a API retorna a primeira página com até 10 registros. Clientes são ordenados por `id` e ordens por data de abertura decrescente.
+Sem parâmetros, a API retorna a primeira página com até 10 registros. Clientes e usuários são ordenados por `id`; ordens são ordenadas por data de abertura decrescente.
 
 ## Filtros de ordens de serviço
 
@@ -126,6 +145,8 @@ Os DTOs validam campos obrigatórios, tamanho de textos e valores monetários n�
 | Corpo de requisição inválido | `400 Bad Request` |
 | Cliente ou ordem não encontrada | `404 Not Found` |
 | Transição de status inválida | `409 Conflict` |
+| E-mail de usuário já cadastrado | `409 Conflict` |
+| Exclusão ou alteração do último administrador | `409 Conflict` |
 
 Os erros usam o formato `ProblemDetail` do Spring, deixando a resposta consistente para quem consumir a API.
 
@@ -205,7 +226,9 @@ Authorization: Bearer <token>
 | `ATENDENTE` | Gerencia clientes, consulta informações e abre ordens |
 | `TECNICO` | Consulta clientes e ordens; atualiza dados técnicos e status |
 
-As senhas são armazenadas com hash BCrypt. O JWT tem validade configurável, atualmente de duas horas.
+As senhas são armazenadas com hash BCrypt e jamais aparecem nas respostas da API. E-mails de usuários são normalizados para letras minúsculas. O JWT tem validade configurável, atualmente de duas horas.
+
+O `ADMIN` cadastra atendentes e técnicos em `POST /users`, informando `nome`, `email`, `senha` e `role`. A alteração de senha possui endpoint próprio para não misturá-la com atualizações cadastrais. Para impedir o bloqueio administrativo da aplicação, não é possível excluir a própria conta nem remover ou rebaixar o último `ADMIN`.
 
 ## Migrações de banco de dados
 
@@ -226,13 +249,13 @@ O Swagger UI permite visualizar contratos, campos, respostas e executar requisi�
 
 ## Testes
 
-O projeto possui testes de integração para os endpoints de clientes, ordens de serviço e documentação OpenAPI. Os testes usam H2 em modo de compatibilidade com PostgreSQL, sem depender do banco local.
+O projeto possui testes de integração para os endpoints de clientes, usuários, ordens de serviço e documentação OpenAPI. Os testes usam H2 em modo de compatibilidade com PostgreSQL, sem depender do banco local.
 
 ```powershell
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 43 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel e transições de status inválidas.
+Atualmente, a suíte possui 53 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -248,13 +271,14 @@ Atualmente, a suíte possui 43 testes automatizados cobrindo cenários de sucess
 10. **Migrações versionadas** — Flyway assume a criação e evolução do schema, enquanto o Hibernate valida a compatibilidade das entidades.
 11. **Histórico de status** — Cada transição válida é auditada com os estados anterior e novo, além do instante da alteração.
 12. **Autenticação e autorização** — Login JWT, senhas protegidas com BCrypt e permissões definidas por papel de usuário.
+13. **Gestão administrativa de usuários** — Cadastro, consulta, atualização, redefinição de senha e remoção segura de usuários, incluindo técnicos.
 
 ## Próximas evoluções
 
 - cadastro de técnicos e acompanhamento de custos/lucro.
 - renovação e revogação de tokens;
-- gerenciamento administrativo de usuários e papéis.
+- vínculo de técnicos às ordens de serviço e restrição de acesso às ordens atribuídas.
 
 ## Autor
 
-Projeto pessoal desenvolvido por Helder, com foco em evolução prática de backend, arquitetura REST e qualidade de código.
+Projeto pessoal desenvolvido por Helder, com foco em evolução prática de backend, arquitetura REST, qualidade de código e desenvolvimento responsável com apoio de agentes de IA.

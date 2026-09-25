@@ -1,5 +1,7 @@
 package com.example.nexos.services;
 
+import java.util.Locale;
+
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.AuthenticationException;
@@ -26,14 +28,16 @@ public class AuthenticationService {
     }
 
     public LoginResponseDTO login(LoginRequestDTO loginRequestDTO) {
+        String normalizedEmail = loginRequestDTO.getEmail().trim().toLowerCase(Locale.ROOT);
+
         try {
             authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(loginRequestDTO.getEmail(), loginRequestDTO.getSenha()));
+                    new UsernamePasswordAuthenticationToken(normalizedEmail, loginRequestDTO.getSenha()));
         } catch (AuthenticationException exception) {
             throw new InvalidCredentialsException("E-mail ou senha inválidos");
         }
 
-        UserModel userModel = userRepository.findByEmail(loginRequestDTO.getEmail())
+        UserModel userModel = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new InvalidCredentialsException("E-mail ou senha inválidos"));
 
         return tokenService.generateToken(userModel);

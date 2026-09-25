@@ -48,4 +48,20 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public ProblemDetail handleEmailAlreadyInUse(EmailAlreadyInUseException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("E-mail já cadastrado");
+
+        return problemDetail;
+    }
+
+    @ExceptionHandler(InvalidUserOperationException.class)
+    public ProblemDetail handleInvalidUserOperation(InvalidUserOperationException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("Operação de usuário não permitida");
+
+        return problemDetail;
+    }
+
 }
