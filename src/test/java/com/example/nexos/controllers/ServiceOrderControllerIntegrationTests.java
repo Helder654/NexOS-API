@@ -341,6 +341,50 @@ class ServiceOrderControllerIntegrationTests {
     }
 
     @Test
+    void shouldSetCompletionDateWhenFinalizingServiceOrder() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setStatus(ServiceOrderStatus.EM_REPARO);
+        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "FINALIZADA"
+                        }
+                        """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("FINALIZADA"))
+                .andExpect(jsonPath("$.dataFinalizacao").exists());
+
+        assertThat(serviceOrderRepository.findById(serviceOrderModel.getId()).orElseThrow().getDataFinalizacao())
+                .isNotNull();
+    }
+
+    @Test
+    void shouldRejectFinalizationWithoutFinancialData() throws Exception {
+        ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
+                "ana.souza@example.com"));
+        ServiceOrderModel serviceOrderModel = saveServiceOrder(clientModel);
+        serviceOrderModel.setStatus(ServiceOrderStatus.EM_REPARO);
+        serviceOrderModel.setValor(null);
+        serviceOrderModel.setCustoReparo(null);
+        serviceOrderRepository.save(serviceOrderModel);
+
+        mockMvc.perform(patch("/service-orders/{id}/status", serviceOrderModel.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {
+                          "status": "FINALIZADA"
+                        }
+                        """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.title").value("Dados financeiros incompletos"));
+    }
+
+    @Test
     void shouldRejectServiceOrderStatusWithoutValue() throws Exception {
         ClientModel clientModel = clientRepository.save(new ClientModel(null, "Ana Souza", "(11) 99999-9999",
                 "ana.souza@example.com"));

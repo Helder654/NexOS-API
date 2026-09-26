@@ -28,12 +28,17 @@ class FlywayMigrationIntegrationTests {
                 "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
                         + "WHERE TABLE_NAME = 'TB_ORDENS_SERVICO' AND COLUMN_NAME = 'ID_TECNICO'",
                 Integer.class);
+        Integer completionDateColumnCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM INFORMATION_SCHEMA.COLUMNS "
+                        + "WHERE TABLE_NAME = 'TB_ORDENS_SERVICO' AND COLUMN_NAME = 'DATA_FINALIZACAO'",
+                Integer.class);
 
         assertThat(clientTableCount).isEqualTo(1);
         assertThat(serviceOrderTableCount).isEqualTo(1);
         assertThat(statusHistoryTableCount).isEqualTo(1);
         assertThat(userTableCount).isEqualTo(1);
         assertThat(technicianColumnCount).isEqualTo(1);
+        assertThat(completionDateColumnCount).isEqualTo(1);
     }
 
 }

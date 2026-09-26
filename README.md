@@ -105,6 +105,8 @@ A ordem pode iniciar sem técnico responsável. Um `ADMIN` ou `ATENDENTE` atribu
 
 Um técnico pode consultar clientes e ordens, mas só pode alterar dados técnicos ou status de uma ordem atribuída ao próprio e-mail. A regra é verificada na camada de serviço, de modo que não dependa exclusivamente da proteção do endpoint. O `ADMIN` permanece autorizado a alterar qualquer ordem.
 
+Quando uma ordem chega ao status `FINALIZADA`, a API registra automaticamente a `dataFinalizacao`. Para preservar a consistência financeira, `valor` e `custoReparo` devem estar preenchidos antes dessa transição.
+
 O `PUT` não altera cliente, data de abertura nem status. Essas informações têm endpoints e regras próprias, evitando atualizações acidentais.
 
 Uma ordem pode ser excluída somente enquanto estiver `ABERTA` ou depois de `CANCELADA`. Ordens em análise, reparo ou já finalizadas preservam seu histórico e retornam `409 Conflict` caso a exclusão seja solicitada.
@@ -154,6 +156,7 @@ Os DTOs validam campos obrigatórios, tamanho de textos e valores monetários n�
 | Exclusão ou alteração do último administrador | `409 Conflict` |
 | Técnico inválido ou atribuição em ordem encerrada | `409 Conflict` |
 | Técnico tenta alterar ordem de outro técnico ou sem responsável | `403 Forbidden` |
+| Finalização sem valor ou custo de reparo | `409 Conflict` |
 
 Os erros usam o formato `ProblemDetail` do Spring, deixando a resposta consistente para quem consumir a API.
 
@@ -253,7 +256,7 @@ Content-Type: application/json
 
 ## Migrações de banco de dados
 
-O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, a `V2__create_service_order_status_history.sql` adiciona o histórico de status, a `V3__create_users.sql` adiciona usuários e seus papéis, e a `V4__add_technician_to_service_orders.sql` cria o vínculo opcional com o técnico responsável. As migrações também criam índices usados nas consultas por cliente, status, data de abertura e técnico.
+O schema é versionado com Flyway. A migração `V1__create_initial_schema.sql` cria as tabelas de clientes e ordens de serviço, a `V2__create_service_order_status_history.sql` adiciona o histórico de status, a `V3__create_users.sql` adiciona usuários e seus papéis, a `V4__add_technician_to_service_orders.sql` cria o vínculo opcional com o técnico responsável e a `V5__add_completion_date_to_service_orders.sql` adiciona a data de finalização. As migrações também criam índices usados nas consultas por cliente, status, datas e técnico.
 
 O Hibernate utiliza `ddl-auto=validate`: ele confere se as entidades correspondem ao schema, mas não cria nem altera tabelas. Toda evolução estrutural deve ser adicionada como uma nova migração em `src/main/resources/db/migration`.
 
@@ -276,7 +279,7 @@ O projeto possui testes de integração para os endpoints de clientes, usuários
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 64 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos, isolamento de ordens por técnico e transições de status inválidas.
+Atualmente, a suíte possui 66 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos, isolamento de ordens por técnico, data de finalização e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -295,6 +298,7 @@ Atualmente, a suíte possui 64 testes automatizados cobrindo cenários de sucess
 13. **Gestão administrativa de usuários** — Cadastro, consulta, atualização, redefinição de senha e remoção segura de usuários, incluindo técnicos.
 14. **Técnicos nas ordens de serviço** — Vínculo opcional, atribuição por endpoint próprio, validação do papel do usuário e proteção contra exclusão de técnico em uso.
 15. **Isolamento de alterações técnicas** — Técnicos só alteram dados e status das ordens atribuídas a eles; administradores mantêm acesso total.
+16. **Finalização financeira consistente** — A conclusão registra data automaticamente e exige valor e custo de reparo preenchidos.
 
 ## Próximas evoluções
 

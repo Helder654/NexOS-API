@@ -23,6 +23,7 @@ public class ServiceOrderDTO {
     private String defeitoRelatado;
     private String analiseTecnico;
     private LocalDateTime dataAbertura;
+    private LocalDateTime dataFinalizacao;
     private String diagnostico;
     private BigDecimal valor;
     private BigDecimal custoReparo;

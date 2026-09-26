@@ -50,6 +50,9 @@ public class ServiceOrderModel {
     @Column(name = "data_abertura", nullable = false)
     private LocalDateTime dataAbertura;
 
+    @Column(name = "data_finalizacao")
+    private LocalDateTime dataFinalizacao;
+
     @Column(name = "diagnostico", length = 2000)
     private String diagnostico;
 

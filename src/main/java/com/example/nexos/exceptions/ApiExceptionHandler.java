@@ -56,6 +56,15 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(IncompleteServiceOrderFinancialDataException.class)
+    public ProblemDetail handleIncompleteServiceOrderFinancialData(
+            IncompleteServiceOrderFinancialDataException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.CONFLICT, exception.getMessage());
+        problemDetail.setTitle("Dados financeiros incompletos");
+
+        return problemDetail;
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());

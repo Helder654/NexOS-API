@@ -19,6 +19,7 @@ import com.example.nexos.dtos.UpdateServiceOrderDTO;
 import com.example.nexos.dtos.UpdateServiceOrderStatusDTO;
 import com.example.nexos.exceptions.InvalidServiceOrderStatusException;
 import com.example.nexos.exceptions.InvalidServiceOrderTechnicianException;
+import com.example.nexos.exceptions.IncompleteServiceOrderFinancialDataException;
 import com.example.nexos.exceptions.InvalidServiceOrderDeletionException;
 import com.example.nexos.exceptions.InvalidServiceOrderFilterException;
 import com.example.nexos.exceptions.ResourceNotFoundException;
@@ -132,7 +133,12 @@ public class ServiceOrderService {
                     "Não é possível alterar o status de " + previousStatus + " para " + newStatus);
         }
 
+        validateFinancialDataForFinalization(serviceOrderModel, newStatus);
+
         serviceOrderModel.setStatus(newStatus);
+        if (newStatus == ServiceOrderStatus.FINALIZADA) {
+            serviceOrderModel.setDataFinalizacao(LocalDateTime.now());
+        }
         ServiceOrderModel updatedServiceOrder = serviceOrderRepository.save(serviceOrderModel);
         serviceOrderStatusHistoryRepository.save(
                 serviceOrderStatusHistoryMapper.map(updatedServiceOrder, previousStatus, newStatus));
@@ -191,6 +197,15 @@ public class ServiceOrderService {
         if (!isAssignedTechnician) {
             throw new ServiceOrderAccessDeniedException(
                     "O técnico só pode alterar ordens de serviço atribuídas a ele");
+        }
+    }
+
+    private void validateFinancialDataForFinalization(ServiceOrderModel serviceOrderModel,
+            ServiceOrderStatus newStatus) {
+        if (newStatus == ServiceOrderStatus.FINALIZADA
+                && (serviceOrderModel.getValor() == null || serviceOrderModel.getCustoReparo() == null)) {
+            throw new IncompleteServiceOrderFinancialDataException(
+                    "Valor e custo de reparo devem ser informados antes de finalizar a ordem de serviço");
         }
     }
 

@@ -36,6 +36,7 @@ public class ServiceOrderMapper {
         serviceOrderDTO.setDefeitoRelatado(serviceOrderModel.getDefeitoRelatado());
         serviceOrderDTO.setAnaliseTecnico(serviceOrderModel.getAnaliseTecnico());
         serviceOrderDTO.setDataAbertura(serviceOrderModel.getDataAbertura());
+        serviceOrderDTO.setDataFinalizacao(serviceOrderModel.getDataFinalizacao());
         serviceOrderDTO.setDiagnostico(serviceOrderModel.getDiagnostico());
         serviceOrderDTO.setValor(serviceOrderModel.getValor());
         serviceOrderDTO.setCustoReparo(serviceOrderModel.getCustoReparo());
