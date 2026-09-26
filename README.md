@@ -211,12 +211,14 @@ Content-Type: application/json
 
 ## Como executar localmente
 
-### Pré-requisitos
+### Com Maven e PostgreSQL local
 
 - JDK 21 ou superior compatível
 - PostgreSQL em execução
 
-Configure as variáveis de ambiente usadas pela aplicação:
+Nesta modalidade, a API é executada diretamente na máquina. Portanto, `localhost` aponta para o PostgreSQL instalado na própria máquina.
+
+Configure as variáveis de ambiente no terminal ou na configuração da IDE:
 
 ```text
 DATA_BASE_URL=jdbc:postgresql://localhost:5432/nexos
@@ -236,7 +238,41 @@ Depois, inicie a API usando o Maven Wrapper:
 
 A aplicação será iniciada, por padrão, em `http://localhost:8080`.
 
-As três variáveis `ADMIN_*` são usadas somente para criar o primeiro administrador, caso ele ainda não exista. Não as inclua no controle de versão.
+O Spring Boot não lê um arquivo `.env` automaticamente ao executar pelo Maven. Caso use esse arquivo como referência, configure as mesmas variáveis no terminal ou na IDE. As três variáveis `ADMIN_*` são usadas somente para criar o primeiro administrador, caso ele ainda não exista. Não inclua o `.env` no controle de versão.
+
+### Com Docker Compose
+
+Pré-requisito: Docker Desktop em execução.
+
+O Compose inicia a API e o PostgreSQL em uma rede interna. Nesse cenário, `postgres` é o nome do serviço do banco e a API recebe automaticamente a URL `jdbc:postgresql://postgres:5432/${POSTGRES_DB}`. `localhost` não é usado para a comunicação entre os containers.
+
+Crie o arquivo local de variáveis a partir do exemplo apenas se ainda não possuir um `.env`:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Preencha no `.env` uma senha local para `DATA_BASE_PASSWORD`, uma chave de pelo menos 32 caracteres para `JWT_SECRET` e as credenciais iniciais do administrador. Nenhum desses valores deve ser versionado.
+
+Inicie os serviços:
+
+```powershell
+docker compose up --build
+```
+
+Com os containers em execução, acesse:
+
+- API e Swagger UI: `http://localhost:8080/swagger-ui/index.html`
+- Especificação OpenAPI: `http://localhost:8080/v3/api-docs`
+- PostgreSQL pela máquina anfitriã: `localhost:5432`
+
+O volume nomeado `postgres_data` preserva os dados entre reinicializações. Para parar os containers sem apagar os dados, use:
+
+```powershell
+docker compose down
+```
+
+Use `docker compose down -v` apenas quando desejar apagar completamente o banco de desenvolvimento, pois esse comando remove o volume persistente. O Compose aplica `restart: unless-stopped` aos serviços para que eles sejam reiniciados automaticamente, exceto quando forem interrompidos manualmente.
 
 ## Segurança e acesso
 

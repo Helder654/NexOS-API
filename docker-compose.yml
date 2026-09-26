@@ -1,0 +1,42 @@
+name: nexos
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Defina POSTGRES_DB no arquivo .env}
+      POSTGRES_USER: ${DATA_BASE_USERNAME:?Defina DATA_BASE_USERNAME no arquivo .env}
+      POSTGRES_PASSWORD: ${DATA_BASE_PASSWORD:?Defina DATA_BASE_PASSWORD no arquivo .env}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATA_BASE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:?Defina POSTGRES_DB no arquivo .env}
+      DATA_BASE_USERNAME: ${DATA_BASE_USERNAME:?Defina DATA_BASE_USERNAME no arquivo .env}
+      DATA_BASE_PASSWORD: ${DATA_BASE_PASSWORD:?Defina DATA_BASE_PASSWORD no arquivo .env}
+      JWT_SECRET: ${JWT_SECRET:?Defina JWT_SECRET no arquivo .env}
+      ADMIN_NAME: ${ADMIN_NAME:-}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+    ports:
+      - "${API_PORT:-8080}:8080"
+
+volumes:
+  postgres_data:
