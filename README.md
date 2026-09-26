@@ -99,6 +99,12 @@ Todas as rotas abaixo exigem um token de `ADMIN`.
 | `PATCH` | `/users/{id}/password` | Redefine a senha de um usuário |
 | `DELETE` | `/users/{id}` | Remove um usuário quando permitido |
 
+### Relatórios
+
+| Método | Rota | Descrição |
+| --- | --- | --- |
+| `GET` | `/reports/financial` | Consolida faturamento, custos e lucro de ordens finalizadas por período (`ADMIN`) |
+
 Ao abrir uma ordem, o status inicial é `ABERTA` e a data de abertura é definida pelo servidor.
 
 A ordem pode iniciar sem técnico responsável. Um `ADMIN` ou `ATENDENTE` atribui um usuário de papel `TECNICO` por meio do endpoint específico. A resposta da ordem inclui, quando houver atribuição, um resumo seguro do técnico com identificador, nome e e-mail. Ordens `CANCELADA` ou `FINALIZADA` não aceitam novas atribuições.
@@ -132,6 +138,29 @@ GET /service-orders?clienteId=1&status=EM_ANALISE&dataAberturaInicial=2026-01-01
 
 Filtros disponíveis: `clienteId`, `status`, `dataAberturaInicial` e `dataAberturaFinal`. Datas devem usar o formato `yyyy-MM-dd`; o período é inclusivo e a data inicial não pode ser posterior à final.
 
+## Relatório financeiro
+
+O administrador pode consultar o resultado financeiro das ordens concluídas em um período:
+
+```text
+GET /reports/financial?dataInicial=2026-01-01&dataFinal=2026-01-31
+```
+
+As datas usam o formato `yyyy-MM-dd`, o intervalo é inclusivo e a data inicial não pode ser posterior à final. O relatório considera apenas ordens com status `FINALIZADA`, usando a `dataFinalizacao` registrada automaticamente pela API. Isso impede que valores previstos ou ordens em andamento contaminem o resultado.
+
+```json
+{
+  "dataInicial": "2026-01-01",
+  "dataFinal": "2026-01-31",
+  "quantidadeOrdensFinalizadas": 2,
+  "faturamentoTotal": 770.00,
+  "custoTotal": 390.00,
+  "lucroTotal": 380.00
+}
+```
+
+O lucro é calculado pela fórmula `faturamentoTotal - custoTotal`.
+
 ## Fluxo de status da ordem
 
 ```text
@@ -157,6 +186,7 @@ Os DTOs validam campos obrigatórios, tamanho de textos e valores monetários n�
 | Técnico inválido ou atribuição em ordem encerrada | `409 Conflict` |
 | Técnico tenta alterar ordem de outro técnico ou sem responsável | `403 Forbidden` |
 | Finalização sem valor ou custo de reparo | `409 Conflict` |
+| Período financeiro ausente, inválido ou invertido | `400 Bad Request` |
 
 Os erros usam o formato `ProblemDetail` do Spring, deixando a resposta consistente para quem consumir a API.
 
@@ -232,7 +262,7 @@ Authorization: Bearer <token>
 
 | Papel | Permissões |
 | --- | --- |
-| `ADMIN` | Acesso total, incluindo exclusões e atribuição de técnicos |
+| `ADMIN` | Acesso total, incluindo exclusões, atribuição de técnicos e relatório financeiro |
 | `ATENDENTE` | Gerencia clientes, consulta informações, abre ordens e atribui técnicos |
 | `TECNICO` | Consulta clientes e ordens; altera dados técnicos e status apenas das ordens atribuídas a ele |
 
@@ -279,7 +309,7 @@ O projeto possui testes de integração para os endpoints de clientes, usuários
 .\mvnw.cmd clean test
 ```
 
-Atualmente, a suíte possui 66 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos, isolamento de ordens por técnico, data de finalização e transições de status inválidas.
+Atualmente, a suíte possui 70 testes automatizados cobrindo cenários de sucesso, validação, recursos inexistentes, regras de exclusão, paginação, ordenação, filtros, migração de banco, histórico, autenticação JWT, autorização por papel, gestão de usuários, atribuição de técnicos, isolamento de ordens por técnico, data de finalização, relatório financeiro e transições de status inválidas.
 
 ## Etapas já desenvolvidas
 
@@ -299,10 +329,11 @@ Atualmente, a suíte possui 66 testes automatizados cobrindo cenários de sucess
 14. **Técnicos nas ordens de serviço** — Vínculo opcional, atribuição por endpoint próprio, validação do papel do usuário e proteção contra exclusão de técnico em uso.
 15. **Isolamento de alterações técnicas** — Técnicos só alteram dados e status das ordens atribuídas a eles; administradores mantêm acesso total.
 16. **Finalização financeira consistente** — A conclusão registra data automaticamente e exige valor e custo de reparo preenchidos.
+17. **Resumo financeiro** — Administradores consultam faturamento, custos e lucro de ordens finalizadas em um período.
 
 ## Próximas evoluções
 
-- acompanhamento de custos, faturamento e lucro de ordens finalizadas.
+- indicadores financeiros por técnico e por períodos comparativos;
 - renovação e revogação de tokens;
 - desativação de usuários sem apagar seu histórico.
 

@@ -35,6 +35,7 @@ class OpenApiDocumentationIntegrationTests {
                 .andExpect(jsonPath("$.paths['/service-orders']").exists())
                 .andExpect(jsonPath("$.paths['/service-orders/{id}/technician']").exists())
                 .andExpect(jsonPath("$.paths['/users']").exists())
+                .andExpect(jsonPath("$.paths['/reports/financial']").exists())
                 .andExpect(jsonPath("$.components.securitySchemes.bearerAuth.type").value("http"));
     }
 

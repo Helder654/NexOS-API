@@ -65,6 +65,14 @@ public class ApiExceptionHandler {
         return problemDetail;
     }
 
+    @ExceptionHandler(InvalidFinancialReportFilterException.class)
+    public ProblemDetail handleInvalidFinancialReportFilter(InvalidFinancialReportFilterException exception) {
+        ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.BAD_REQUEST, exception.getMessage());
+        problemDetail.setTitle("Filtro financeiro inválido");
+
+        return problemDetail;
+    }
+
     @ExceptionHandler(InvalidCredentialsException.class)
     public ProblemDetail handleInvalidCredentials(InvalidCredentialsException exception) {
         ProblemDetail problemDetail = ProblemDetail.forStatusAndDetail(HttpStatus.UNAUTHORIZED, exception.getMessage());
